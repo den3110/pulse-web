@@ -86,7 +86,9 @@ api.interceptors.response.use(
       }
 
       // Use plain axios (not the api instance) to avoid interceptor loop
-      const { data } = await axios.post("/api/auth/refresh", { refreshToken });
+      const { data } = await axios.post(`${API_URL}/api/auth/refresh`, {
+        refreshToken,
+      });
 
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("refreshToken", data.refreshToken);
