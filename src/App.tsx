@@ -3,7 +3,9 @@ import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ServerProvider } from "./contexts/ServerContext";
 import { ThemeContextProvider } from "./contexts/ThemeContext";
-import { Toaster } from "react-hot-toast";
+import { Toaster, ToastBar, toast } from "react-hot-toast";
+import CloseIcon from "@mui/icons-material/Close";
+import { IconButton } from "@mui/material";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -66,9 +68,44 @@ function App() {
                     border:
                       "1px solid var(--border-color, rgba(255,255,255,0.08))",
                     borderRadius: "10px",
+                    maxWidth: 500, // Better for long messages
                   },
                 }}
-              />
+              >
+                {(t) => (
+                  <ToastBar toast={t}>
+                    {({ icon, message }) => (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          width: "100%",
+                        }}
+                      >
+                        {icon}
+                        <div style={{ flex: 1, margin: "0 8px" }}>
+                          {message}
+                        </div>
+                        {t.type !== "loading" && (
+                          <IconButton
+                            size="small"
+                            onClick={() => toast.dismiss(t.id)}
+                            sx={{
+                              color: "inherit",
+                              p: 0.5,
+                              ml: 1,
+                              opacity: 0.7,
+                              "&:hover": { opacity: 1 },
+                            }}
+                          >
+                            <CloseIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        )}
+                      </div>
+                    )}
+                  </ToastBar>
+                )}
+              </Toaster>
               <Routes>
                 <Route
                   path="/login"

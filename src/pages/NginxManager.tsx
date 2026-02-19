@@ -665,9 +665,18 @@ const NginxManager: React.FC<{ hideHeader?: boolean }> = ({
               justifyContent: "space-between",
             }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <DescriptionIcon sx={{ color: "primary.main" }} />
-              {isNewFile ? t("nginx.newConfig") : editorFilename}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                overflow: "hidden",
+              }}
+            >
+              <DescriptionIcon sx={{ color: "primary.main", flexShrink: 0 }} />
+              <Typography variant="h6" component="div" noWrap>
+                {isNewFile ? t("nginx.newConfig") : editorFilename}
+              </Typography>
             </Box>
             <Box sx={{ display: "flex", gap: 0.5 }}>
               <Tooltip title="Test Nginx">
@@ -724,7 +733,7 @@ const NginxManager: React.FC<{ hideHeader?: boolean }> = ({
                   ? editorFilename
                   : `${editorFilename}.conf`
               }
-              height="60vh"
+              height={isMobile ? "calc(100dvh - 200px)" : "60vh"}
             />
           )}
 
@@ -744,19 +753,39 @@ const NginxManager: React.FC<{ hideHeader?: boolean }> = ({
             </Alert>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setEditorOpen(false)}>
+        <DialogActions
+          sx={{
+            px: 3,
+            pb: 2,
+            display: { xs: "grid", sm: "flex" },
+            gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))" }, // Strict equal columns
+            gap: 1.5,
+            justifyContent: "flex-end",
+            "& > button": {
+              ml: { xs: 0, sm: 1 }, // Reset margin on mobile
+              width: { xs: "100%", sm: "auto" },
+              minWidth: { sm: 100 },
+            },
+          }}
+        >
+          <Button
+            onClick={() => setEditorOpen(false)}
+            variant="outlined"
+            color="inherit"
+          >
             {t("common.cancel")}
           </Button>
           <Button
             variant="outlined"
-            startIcon={<BugReportIcon />}
             onClick={handleTest}
+            color="inherit"
+            startIcon={<BugReportIcon />}
           >
             {t("nginx.test")}
           </Button>
           <Button
             variant="contained"
+            onClick={handleSave}
             startIcon={
               editorSaving ? (
                 <CircularProgress size={16} color="inherit" />
@@ -764,7 +793,6 @@ const NginxManager: React.FC<{ hideHeader?: boolean }> = ({
                 <SaveIcon />
               )
             }
-            onClick={handleSave}
             disabled={editorSaving || editorSaveReloading}
           >
             {t("common.save")}
@@ -772,6 +800,7 @@ const NginxManager: React.FC<{ hideHeader?: boolean }> = ({
           <Button
             variant="contained"
             color="warning"
+            onClick={handleSaveAndReload}
             startIcon={
               editorSaveReloading ? (
                 <CircularProgress size={16} color="inherit" />
@@ -779,7 +808,6 @@ const NginxManager: React.FC<{ hideHeader?: boolean }> = ({
                 <ReplayIcon />
               )
             }
-            onClick={handleSaveAndReload}
             disabled={editorSaving || editorSaveReloading}
           >
             Save & Reload

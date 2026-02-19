@@ -297,8 +297,10 @@ const PortManager: React.FC = () => {
         sx={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: { xs: "flex-start", sm: "center" },
           mb: 3,
+          flexDirection: { xs: "column", sm: "row" },
+          gap: { xs: 2, sm: 0 },
         }}
       >
         <Typography
@@ -310,7 +312,15 @@ const PortManager: React.FC = () => {
           {t("ports.title", "Network Ports")}
         </Typography>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            flexWrap: "wrap",
+            width: { xs: "100%", sm: "auto" },
+          }}
+        >
           <FormControlLabel
             control={
               <Switch
@@ -324,6 +334,7 @@ const PortManager: React.FC = () => {
                 {t("common.autoRefresh", "Auto-refresh")}
               </Typography>
             }
+            sx={{ mr: "auto" }} // Push switch to left, buttons to right on mobile
           />
           <Button
             variant="outlined"
@@ -333,7 +344,7 @@ const PortManager: React.FC = () => {
             sx={{ borderRadius: 2 }}
             disabled={filteredPorts.length === 0}
           >
-            Export CSV
+            Export
           </Button>
           <Button
             variant="contained" // Prominent refresh

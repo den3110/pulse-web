@@ -157,8 +157,10 @@ const UserManagement: React.FC = () => {
         sx={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: { xs: "flex-start", sm: "center" },
           mb: 3,
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 2,
         }}
       >
         <Box>
@@ -173,6 +175,7 @@ const UserManagement: React.FC = () => {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={openCreate}
+          sx={{ width: { xs: "100%", sm: "auto" } }}
         >
           {t("users.addUser")}
         </Button>
@@ -194,67 +197,146 @@ const UserManagement: React.FC = () => {
               <Typography variant="h6">{t("users.noUsers")}</Typography>
             </Box>
           ) : (
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>{t("common.username")}</TableCell>
-                    <TableCell>{t("common.email")}</TableCell>
-                    <TableCell>{t("users.role")}</TableCell>
-                    <TableCell>{t("common.created")}</TableCell>
-                    <TableCell align="right">{t("common.actions")}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {users.map((u) => (
-                    <TableRow key={u._id}>
-                      <TableCell sx={{ fontWeight: 500 }}>
-                        {u.username}
-                      </TableCell>
-                      <TableCell>{u.email}</TableCell>
-                      <TableCell>
+            <>
+              {/* Desktop Table */}
+              <TableContainer sx={{ display: { xs: "none", md: "block" } }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t("common.username")}</TableCell>
+                      <TableCell>{t("common.email")}</TableCell>
+                      <TableCell>{t("users.role")}</TableCell>
+                      <TableCell>{t("common.created")}</TableCell>
+                      <TableCell align="right">{t("common.actions")}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {users.map((u) => (
+                      <TableRow key={u._id}>
+                        <TableCell sx={{ fontWeight: 500 }}>
+                          {u.username}
+                        </TableCell>
+                        <TableCell>{u.email}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={u.role}
+                            size="small"
+                            color={u.role === "admin" ? "primary" : "default"}
+                            variant="outlined"
+                            sx={{ fontSize: 11 }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ fontSize: 12, whiteSpace: "nowrap" }}>
+                          {new Date(u.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell align="right">
+                          <IconButton
+                            size="small"
+                            onClick={() => openEdit(u)}
+                            title="Edit"
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => setResetPassUser(u)}
+                            title="Reset password"
+                          >
+                            <LockResetIcon fontSize="small" />
+                          </IconButton>
+                          {u._id !== currentUser?.id && (
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => setConfirmDelete(u)}
+                              title="Delete"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Mobile Card List */}
+              <Box
+                sx={{
+                  display: { xs: "flex", md: "none" },
+                  flexDirection: "column",
+                  gap: 1,
+                }}
+              >
+                {users.map((u) => (
+                  <Card
+                    key={u._id}
+                    variant="outlined"
+                    sx={{ bgcolor: "background.paper" }}
+                  >
+                    <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          mb: 1,
+                        }}
+                      >
+                        <Box>
+                          <Typography variant="subtitle1" fontWeight={600}>
+                            {u.username}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {u.email}
+                          </Typography>
+                        </Box>
                         <Chip
                           label={u.role}
                           size="small"
                           color={u.role === "admin" ? "primary" : "default"}
                           variant="outlined"
-                          sx={{ fontSize: 11 }}
+                          sx={{ fontSize: 10, height: 20 }}
                         />
-                      </TableCell>
-                      <TableCell sx={{ fontSize: 12, whiteSpace: "nowrap" }}>
-                        {new Date(u.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton
-                          size="small"
-                          onClick={() => openEdit(u)}
-                          title="Edit"
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => setResetPassUser(u)}
-                          title="Reset password"
-                        >
-                          <LockResetIcon fontSize="small" />
-                        </IconButton>
-                        {u._id !== currentUser?.id && (
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mt: 2,
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          Created: {new Date(u.createdAt).toLocaleDateString()}
+                        </Typography>
+                        <Box>
+                          <IconButton size="small" onClick={() => openEdit(u)}>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
                           <IconButton
                             size="small"
-                            color="error"
-                            onClick={() => setConfirmDelete(u)}
-                            title="Delete"
+                            onClick={() => setResetPassUser(u)}
                           >
-                            <DeleteIcon fontSize="small" />
+                            <LockResetIcon fontSize="small" />
                           </IconButton>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                          {u._id !== currentUser?.id && (
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => setConfirmDelete(u)}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            </>
           )}
         </CardContent>
       </Card>

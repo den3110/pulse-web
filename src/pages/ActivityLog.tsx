@@ -129,9 +129,9 @@ const ActivityLog: React.FC = () => {
         sx={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: { xs: "flex-start", sm: "center" },
           mb: 3,
-          flexWrap: "wrap",
+          flexDirection: { xs: "column", sm: "row" },
           gap: 2,
         }}
       >
@@ -151,7 +151,7 @@ const ActivityLog: React.FC = () => {
             setActionFilter(e.target.value);
             setPage(1);
           }}
-          sx={{ minWidth: 220 }}
+          sx={{ minWidth: 220, width: { xs: "100%", sm: "auto" } }}
           label={t("activity.filterByAction")}
         >
           {actions.map((a) => (
@@ -183,47 +183,102 @@ const ActivityLog: React.FC = () => {
               </Typography>
             </Box>
           ) : (
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>{t("common.actions")}</TableCell>
-                    <TableCell>User</TableCell>
-                    <TableCell>Details</TableCell>
-                    <TableCell>Time</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {activities.map((a) => (
-                    <TableRow key={a._id}>
-                      <TableCell>
-                        <Chip
-                          label={getActionLabel(a.action)}
-                          size="small"
-                          color={actionColors[a.action] || "default"}
-                          variant="outlined"
-                          sx={{ fontSize: 11 }}
-                        />
-                      </TableCell>
-                      <TableCell>{a.username || "—"}</TableCell>
-                      <TableCell
-                        sx={{
-                          maxWidth: 400,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {a.details}
-                      </TableCell>
-                      <TableCell sx={{ whiteSpace: "nowrap", fontSize: 12 }}>
-                        {new Date(a.createdAt).toLocaleString()}
-                      </TableCell>
+            <>
+              {/* Desktop Table */}
+              <TableContainer sx={{ display: { xs: "none", md: "block" } }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t("common.actions")}</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>Details</TableCell>
+                      <TableCell>Time</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {activities.map((a) => (
+                      <TableRow key={a._id}>
+                        <TableCell>
+                          <Chip
+                            label={getActionLabel(a.action)}
+                            size="small"
+                            color={actionColors[a.action] || "default"}
+                            variant="outlined"
+                            sx={{ fontSize: 11 }}
+                          />
+                        </TableCell>
+                        <TableCell>{a.username || "—"}</TableCell>
+                        <TableCell
+                          sx={{
+                            maxWidth: 400,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {a.details}
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: "nowrap", fontSize: 12 }}>
+                          {new Date(a.createdAt).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Mobile Cards */}
+              <Box
+                sx={{
+                  display: { xs: "flex", md: "none" },
+                  flexDirection: "column",
+                  gap: 0,
+                }}
+              >
+                {activities.map((a, index) => (
+                  <Box
+                    key={a._id}
+                    sx={{
+                      p: 2,
+                      borderBottom:
+                        index < activities.length - 1
+                          ? "1px solid rgba(255,255,255,0.05)"
+                          : "none",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        mb: 1,
+                      }}
+                    >
+                      <Chip
+                        label={getActionLabel(a.action)}
+                        size="small"
+                        color={actionColors[a.action] || "default"}
+                        variant="outlined"
+                        sx={{ fontSize: 11 }}
+                      />
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(a.createdAt).toLocaleString()}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      <Box
+                        component="span"
+                        sx={{ fontWeight: 600, color: "primary.light" }}
+                      >
+                        {a.username || "System"}
+                      </Box>
+                      {" - "}
+                      {a.details}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </>
           )}
         </CardContent>
       </Card>

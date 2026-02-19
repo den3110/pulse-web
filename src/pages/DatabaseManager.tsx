@@ -231,16 +231,33 @@ const DatabaseManager: React.FC = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, md: 3 } }}>
-      <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 2 }}>
-        <StorageIcon sx={{ color: "primary.main", fontSize: 32 }} />
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h5" fontWeight={700}>
-            {t("database.title")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t("database.subtitle", { server: selectedServer.name })}
-          </Typography>
+    <Box>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: { xs: "flex-start", sm: "center" },
+          mb: 3,
+          gap: 2,
+          flexDirection: { xs: "column", sm: "row" },
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            mb: { xs: 1, sm: 0 },
+          }}
+        >
+          <StorageIcon sx={{ color: "primary.main", fontSize: 32 }} />
+          <Box>
+            <Typography variant="h5" fontWeight={700}>
+              {t("database.title")}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {t("database.subtitle", { server: selectedServer.name })}
+            </Typography>
+          </Box>
         </Box>
         <Button
           startIcon={<RefreshIcon />}
@@ -248,6 +265,7 @@ const DatabaseManager: React.FC = () => {
           disabled={loading}
           variant="outlined"
           size="small"
+          sx={{ ml: { sm: "auto" }, width: { xs: "100%", sm: "auto" } }}
         >
           {t("common.refresh")}
         </Button>
@@ -271,45 +289,16 @@ const DatabaseManager: React.FC = () => {
       {tab === 0 ? (
         <>
           {loading && containers.length === 0 ? (
-            <TableContainer component={Paper} elevation={0} variant="outlined">
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>{t("database.containerName")}</TableCell>
-                    <TableCell>{t("database.image")}</TableCell>
-                    <TableCell>{t("database.type")}</TableCell>
-                    <TableCell>{t("database.status")}</TableCell>
-                    <TableCell align="right">{t("database.actions")}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {[1, 2, 3].map((i) => (
-                    <TableRow key={i}>
-                      <TableCell>
-                        <Skeleton variant="text" width={150} />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton variant="text" width={200} />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton variant="rounded" width={80} height={24} />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton variant="text" width={100} />
-                      </TableCell>
-                      <TableCell align="right">
-                        <Skeleton
-                          variant="rectangular"
-                          width={100}
-                          height={30}
-                          sx={{ ml: "auto", borderRadius: 1 }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <Box sx={{ p: 2 }}>
+              {[1, 2, 3].map((i) => (
+                <Skeleton
+                  key={i}
+                  variant="rectangular"
+                  height={60}
+                  sx={{ mb: 1, borderRadius: 1 }}
+                />
+              ))}
+            </Box>
           ) : containers.length === 0 ? (
             <Box
               sx={{
@@ -324,119 +313,305 @@ const DatabaseManager: React.FC = () => {
               </Typography>
             </Box>
           ) : (
-            <TableContainer component={Paper} elevation={0} variant="outlined">
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>{t("database.containerName")}</TableCell>
-                    <TableCell>{t("database.image")}</TableCell>
-                    <TableCell>{t("database.type")}</TableCell>
-                    <TableCell>{t("database.status")}</TableCell>
-                    <TableCell align="right">{t("database.actions")}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {containers.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell
-                        sx={{ fontFamily: "monospace", fontWeight: 600 }}
+            <>
+              {/* Desktop Table View */}
+              <TableContainer
+                component={Paper}
+                elevation={0}
+                variant="outlined"
+                sx={{ display: { xs: "none", md: "block" } }}
+              >
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t("database.containerName")}</TableCell>
+                      <TableCell>{t("database.image")}</TableCell>
+                      <TableCell>{t("database.type")}</TableCell>
+                      <TableCell>{t("database.status")}</TableCell>
+                      <TableCell align="right">
+                        {t("database.actions")}
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {containers.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell
+                          sx={{ fontFamily: "monospace", fontWeight: 600 }}
+                        >
+                          {c.name}
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: "monospace" }}>
+                          {c.image}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={c.type.toUpperCase()}
+                            size="small"
+                            color={c.type === "unknown" ? "default" : "primary"}
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>{c.status}</TableCell>
+                        <TableCell align="right">
+                          <Button
+                            startIcon={<BackupIcon />}
+                            size="small"
+                            onClick={() => handleBackupClick(c)}
+                            disabled={
+                              c.type === "unknown" || c.type === "redis"
+                            }
+                          >
+                            {t("database.backup")}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Mobile Card View */}
+              <Box
+                sx={{
+                  display: { xs: "flex", md: "none" },
+                  flexDirection: "column",
+                  gap: 2,
+                }}
+              >
+                {containers.map((c) => (
+                  <Card key={c.id} variant="outlined">
+                    <CardContent
+                      sx={{
+                        p: 1.5,
+                        pb: "12px !important",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 1,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                        }}
                       >
-                        {c.name}
-                      </TableCell>
-                      <TableCell sx={{ fontFamily: "monospace" }}>
-                        {c.image}
-                      </TableCell>
-                      <TableCell>
+                        <Box>
+                          <Typography
+                            variant="subtitle2"
+                            fontWeight={600}
+                            sx={{ fontFamily: "monospace" }}
+                          >
+                            {c.name}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ fontFamily: "monospace", display: "block" }}
+                          >
+                            {c.image}
+                          </Typography>
+                        </Box>
                         <Chip
                           label={c.type.toUpperCase()}
                           size="small"
                           color={c.type === "unknown" ? "default" : "primary"}
                           variant="outlined"
+                          sx={{ height: 20, fontSize: 10 }}
                         />
-                      </TableCell>
-                      <TableCell>{c.status}</TableCell>
-                      <TableCell align="right">
-                        <Button
-                          startIcon={<BackupIcon />}
-                          size="small"
-                          onClick={() => handleBackupClick(c)}
-                          disabled={c.type === "unknown" || c.type === "redis"}
-                        >
-                          {t("database.backup")}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                      </Box>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ fontSize: 12 }}
+                      >
+                        Status: {c.status}
+                      </Typography>
+                      <Button
+                        startIcon={<BackupIcon />}
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleBackupClick(c)}
+                        disabled={c.type === "unknown" || c.type === "redis"}
+                        fullWidth
+                      >
+                        {t("database.backup")}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            </>
           )}
         </>
       ) : (
-        <TableContainer component={Paper} elevation={0} variant="outlined">
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>{t("common.name", "Name")}</TableCell>
-                <TableCell>{t("common.time", "Time")}</TableCell>
-                <TableCell>{t("ftp.size", "Size")}</TableCell>
-                <TableCell align="right">
-                  {t("common.actions", "Actions")}
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {backups.length === 0 ? (
+        <>
+          {/* Desktop Table */}
+          <TableContainer
+            component={Paper}
+            elevation={0}
+            variant="outlined"
+            sx={{ display: { xs: "none", md: "block" } }}
+          >
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
-                    <Typography color="text.secondary">
-                      No backups found
-                    </Typography>
+                  <TableCell>{t("common.name", "Name")}</TableCell>
+                  <TableCell>{t("common.time", "Time")}</TableCell>
+                  <TableCell>{t("ftp.size", "Size")}</TableCell>
+                  <TableCell align="right">
+                    {t("common.actions", "Actions")}
                   </TableCell>
                 </TableRow>
-              ) : (
-                backups.map((b) => (
-                  <TableRow key={b.filename}>
-                    <TableCell sx={{ fontFamily: "monospace" }}>
-                      {b.filename}
-                    </TableCell>
-                    <TableCell>{new Date(b.date).toLocaleString()}</TableCell>
-                    <TableCell>{b.size}</TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Restore">
-                        <IconButton
-                          color="warning"
-                          size="small"
-                          onClick={() => handleRestoreClick(b)}
-                        >
-                          <RestoreIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Download">
-                        <IconButton
-                          color="primary"
-                          size="small"
-                          onClick={() => handleDownloadBackup(b.filename)}
-                        >
-                          <DownloadIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          color="error"
-                          size="small"
-                          onClick={() => handleDeleteBackup(b.filename)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
+              </TableHead>
+              <TableBody>
+                {backups.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                      <Typography color="text.secondary">
+                        No backups found
+                      </Typography>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ) : (
+                  backups.map((b) => (
+                    <TableRow key={b.filename}>
+                      <TableCell sx={{ fontFamily: "monospace" }}>
+                        {b.filename}
+                      </TableCell>
+                      <TableCell>{new Date(b.date).toLocaleString()}</TableCell>
+                      <TableCell>{b.size}</TableCell>
+                      <TableCell align="right">
+                        <Tooltip title="Restore">
+                          <IconButton
+                            color="warning"
+                            size="small"
+                            onClick={() => handleRestoreClick(b)}
+                          >
+                            <RestoreIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Download">
+                          <IconButton
+                            color="primary"
+                            size="small"
+                            onClick={() => handleDownloadBackup(b.filename)}
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={() => handleDeleteBackup(b.filename)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* Mobile List View */}
+          <Box
+            sx={{
+              display: { xs: "flex", md: "none" },
+              flexDirection: "column",
+              gap: 1,
+            }}
+          >
+            {backups.length === 0 ? (
+              <Box
+                sx={{
+                  p: 4,
+                  textAlign: "center",
+                  border: "1px dashed grey",
+                  borderRadius: 2,
+                }}
+              >
+                <Typography color="text.secondary">No backups found</Typography>
+              </Box>
+            ) : (
+              backups.map((b) => (
+                <Card key={b.filename} variant="outlined">
+                  <CardContent sx={{ p: 1.5, pb: "12px !important" }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        mb: 1,
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        fontWeight={600}
+                        sx={{ fontFamily: "monospace", wordBreak: "break-all" }}
+                      >
+                        {b.filename}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 1,
+                      }}
+                    >
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(b.date).toLocaleString()}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        component="span"
+                        sx={{ fontWeight: 600 }}
+                      >
+                        {b.size}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        gap: 1,
+                      }}
+                    >
+                      <Button
+                        size="small"
+                        color="warning"
+                        startIcon={<RestoreIcon />}
+                        onClick={() => handleRestoreClick(b)}
+                      >
+                        Restore
+                      </Button>
+                      <Button
+                        size="small"
+                        startIcon={<DownloadIcon />}
+                        onClick={() => handleDownloadBackup(b.filename)}
+                      >
+                        Download
+                      </Button>
+                      <Button
+                        size="small"
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={() => handleDeleteBackup(b.filename)}
+                      >
+                        Delete
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </Box>
+        </>
       )}
 
       {/* Backup Dialog */}

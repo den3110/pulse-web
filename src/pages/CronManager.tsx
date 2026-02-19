@@ -466,52 +466,73 @@ const CronManager: React.FC = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, md: 3 } }}>
+    <Box>
       <Box
         sx={{
           display: "flex",
-          alignItems: "center",
+          alignItems: { xs: "flex-start", sm: "center" },
           mb: 3,
-          gap: 2,
-          flexWrap: "wrap",
+          gap: { xs: 2, sm: 2 },
+          flexDirection: { xs: "column", sm: "row" },
         }}
       >
-        <AccessTimeIcon sx={{ color: "primary.main", fontSize: 32 }} />
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h5" fontWeight={700}>
-            {t("cron.title")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t("cron.subtitle", { server: selectedServer.name })}
-          </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            mb: { xs: 1, sm: 0 },
+          }}
+        >
+          <AccessTimeIcon sx={{ color: "primary.main", fontSize: 32 }} />
+          <Box>
+            <Typography variant="h5" fontWeight={700}>
+              {t("cron.title")}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {t("cron.subtitle", { server: selectedServer.name })}
+            </Typography>
+          </Box>
         </Box>
 
-        <ToggleButtonGroup
-          value={mode}
-          exclusive
-          onChange={handleModeChange}
-          size="small"
-          sx={{ mr: 2 }}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            ml: { sm: "auto" },
+            width: { xs: "100%", sm: "auto" },
+            flexWrap: { xs: "wrap", sm: "nowrap" },
+          }}
         >
-          <ToggleButton value="visual">
-            <ListAltIcon sx={{ mr: 1, fontSize: 18 }} />
-            {t("cron.visualMode")}
-          </ToggleButton>
-          <ToggleButton value="raw">
-            <CodeIcon sx={{ mr: 1, fontSize: 18 }} />
-            {t("cron.rawMode")}
-          </ToggleButton>
-        </ToggleButtonGroup>
+          <ToggleButtonGroup
+            value={mode}
+            exclusive
+            onChange={handleModeChange}
+            size="small"
+            sx={{ flex: { xs: 1, sm: "none" } }}
+          >
+            <ToggleButton value="visual" sx={{ flex: 1 }}>
+              <ListAltIcon sx={{ mr: 1, fontSize: 18 }} />
+              {t("cron.visualMode")}
+            </ToggleButton>
+            <ToggleButton value="raw" sx={{ flex: 1 }}>
+              <CodeIcon sx={{ mr: 1, fontSize: 18 }} />
+              {t("cron.rawMode")}
+            </ToggleButton>
+          </ToggleButtonGroup>
 
-        <Button
-          startIcon={<RefreshIcon />}
-          onClick={fetchCronJobs}
-          disabled={loading}
-          variant="outlined"
-          size="small"
-        >
-          {t("common.refresh")}
-        </Button>
+          <Button
+            startIcon={<RefreshIcon />}
+            onClick={fetchCronJobs}
+            disabled={loading}
+            variant="outlined"
+            size="small"
+            sx={{ width: { xs: "100%", sm: "auto" } }}
+          >
+            {t("common.refresh")}
+          </Button>
+        </Box>
       </Box>
 
       {/* VISUAL MODE */}
@@ -526,12 +547,16 @@ const CronManager: React.FC = () => {
                 display: "flex",
                 justifyContent: "space-between",
                 bgcolor: "background.paper",
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 2,
               }}
             >
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => handleOpenDialog()}
+                fullWidth={false}
+                sx={{ width: { xs: "100%", sm: "auto" } }}
               >
                 {t("cron.addJob")}
               </Button>
@@ -541,58 +566,24 @@ const CronManager: React.FC = () => {
                 onClick={saveCronJobs}
                 disabled={loading || !hasChanges}
                 color={hasChanges ? "primary" : "inherit"}
+                fullWidth={false}
+                sx={{ width: { xs: "100%", sm: "auto" } }}
               >
                 {loading ? t("common.saving") : t("common.save")}
               </Button>
             </Box>
 
             {loading && jobs.length === 0 ? (
-              <TableContainer component={Paper} elevation={0}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t("cron.schedule")}</TableCell>
-                      <TableCell>{t("cron.command")}</TableCell>
-                      <TableCell width={100}>{t("common.actions")}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {[1, 2, 3].map((i) => (
-                      <TableRow key={i}>
-                        <TableCell>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 0.5,
-                            }}
-                          >
-                            <Skeleton variant="text" width={120} />
-                            <Skeleton variant="text" width={80} />
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton variant="text" width="80%" />
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: "flex", gap: 1 }}>
-                            <Skeleton
-                              variant="circular"
-                              width={24}
-                              height={24}
-                            />
-                            <Skeleton
-                              variant="circular"
-                              width={24}
-                              height={24}
-                            />
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              <Box sx={{ p: 2 }}>
+                {[1, 2, 3].map((i) => (
+                  <Skeleton
+                    key={i}
+                    variant="rectangular"
+                    height={60}
+                    sx={{ mb: 1, borderRadius: 1 }}
+                  />
+                ))}
+              </Box>
             ) : jobs.length === 0 ? (
               <Box sx={{ p: 4, textAlign: "center" }}>
                 <Typography color="text.secondary">
@@ -600,23 +591,97 @@ const CronManager: React.FC = () => {
                 </Typography>
               </Box>
             ) : (
-              <TableContainer component={Paper} elevation={0}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t("cron.schedule")}</TableCell>
-                      <TableCell>{t("cron.command")}</TableCell>
-                      <TableCell width={100}>{t("common.actions")}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {jobs.map((job) => (
-                      <TableRow key={job.id}>
-                        <TableCell>
-                          <Box
-                            sx={{ display: "flex", flexDirection: "column" }}
-                          >
-                            <Typography variant="body2" fontWeight={600}>
+              <>
+                {/* Desktop Table View */}
+                <TableContainer
+                  component={Paper}
+                  elevation={0}
+                  sx={{ display: { xs: "none", md: "block" } }}
+                >
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>{t("cron.schedule")}</TableCell>
+                        <TableCell>{t("cron.command")}</TableCell>
+                        <TableCell width={100}>{t("common.actions")}</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {jobs.map((job) => (
+                        <TableRow key={job.id}>
+                          <TableCell>
+                            <Box
+                              sx={{ display: "flex", flexDirection: "column" }}
+                            >
+                              <Typography variant="body2" fontWeight={600}>
+                                {describeCron(job)}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ fontFamily: "monospace" }}
+                              >
+                                {`${job.min} ${job.hour} ${job.dom} ${job.mon} ${job.dow}`}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              variant="body2"
+                              sx={{ fontFamily: "monospace", fontSize: 13 }}
+                            >
+                              {job.command}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: "flex" }}>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenDialog(job)}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDeleteJob(job.id)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {/* Mobile Card View */}
+                <Box
+                  sx={{
+                    display: { xs: "flex", md: "none" },
+                    flexDirection: "column",
+                    gap: 1,
+                    p: 2,
+                  }}
+                >
+                  {jobs.map((job) => (
+                    <Card
+                      key={job.id}
+                      variant="outlined"
+                      sx={{ bgcolor: "background.default" }}
+                    >
+                      <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            mb: 1,
+                          }}
+                        >
+                          <Box>
+                            <Typography variant="subtitle2" fontWeight={600}>
                               {describeCron(job)}
                             </Typography>
                             <Typography
@@ -627,17 +692,7 @@ const CronManager: React.FC = () => {
                               {`${job.min} ${job.hour} ${job.dom} ${job.mon} ${job.dow}`}
                             </Typography>
                           </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            sx={{ fontFamily: "monospace", fontSize: 13 }}
-                          >
-                            {job.command}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: "flex" }}>
+                          <Box sx={{ display: "flex", gap: 0.5 }}>
                             <IconButton
                               size="small"
                               onClick={() => handleOpenDialog(job)}
@@ -652,12 +707,25 @@ const CronManager: React.FC = () => {
                               <DeleteIcon fontSize="small" />
                             </IconButton>
                           </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily: "monospace",
+                            fontSize: 12,
+                            bgcolor: "action.hover",
+                            p: 1,
+                            borderRadius: 1,
+                            wordBreak: "break-all",
+                          }}
+                        >
+                          {job.command}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Box>
+              </>
             )}
           </CardContent>
         </Card>
