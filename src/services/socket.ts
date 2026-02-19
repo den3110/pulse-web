@@ -14,19 +14,24 @@ export const connectSocket = (): Socket => {
     transports: ["websocket", "polling"],
   };
 
-  // If URL has path, use it as base path for socket.io
-  if (SOCKET_URL.startsWith("http")) {
-    try {
-      const urlObj = new URL(SOCKET_URL);
-      url = urlObj.origin;
-      if (urlObj.pathname && urlObj.pathname !== "/") {
-        options.path = `${urlObj.pathname.replace(/\/$/, "")}/socket.io`;
-      }
-    } catch (e) {
-      console.error("[Socket] Invalid URL:", SOCKET_URL);
+  // Determine the correct socket URL and path
+  // If VITE_API_URL includes a path (e.g. /backend or https://site.com/backend),
+  // we need to set it as options.path and connect to the root/origin.
+  try {
+    const urlObj = new URL(SOCKET_URL, window.location.origin);
+
+    // Always connect to the origin (or just "/" if you prefer, but origin is explicit)
+    // extracting the origin ensures 'io' doesn't interpret the path as a namespace
+    url = urlObj.origin;
+
+    if (urlObj.pathname && urlObj.pathname !== "/") {
+      options.path = `${urlObj.pathname.replace(/\/$/, "")}/socket.io`;
     }
+  } catch (e) {
+    console.error("[Socket] Invalid URL:", SOCKET_URL, e);
   }
 
+  console.log("[Socket] Connecting to:", url, "with options:", options);
   socket = io(url, options);
 
   socket.on("connect", () => {
