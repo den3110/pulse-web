@@ -719,7 +719,7 @@ const Projects: React.FC = () => {
                       >
                         {visibleSecrets[project._id]
                           ? visibleSecrets[project._id]
-                          : `${window.location.origin}/api/webhook/${project._id}`}
+                          : `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${project._id}`}
                       </Typography>
                     </Box>
 
@@ -728,7 +728,7 @@ const Projects: React.FC = () => {
                       onClick={() => {
                         const text = visibleSecrets[project._id]
                           ? visibleSecrets[project._id]
-                          : `${window.location.origin}/api/webhook/${project._id}`;
+                          : `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${project._id}`;
                         navigator.clipboard.writeText(text);
                         toast.success(
                           visibleSecrets[project._id]

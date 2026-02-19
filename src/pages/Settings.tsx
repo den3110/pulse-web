@@ -756,7 +756,8 @@ const Settings: React.FC = () => {
               border: "1px solid rgba(255,255,255,0.06)",
             }}
           >
-            POST {window.location.origin}/api/webhook/{"<projectId>"}
+            POST {import.meta.env.VITE_API_URL || window.location.origin}
+            /api/webhook/{"<projectId>"}
           </Box>
           <Alert
             severity="info"

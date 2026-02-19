@@ -346,8 +346,9 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
       if (!selectedServer?._id) return;
 
       const token = localStorage.getItem("accessToken");
+      const API_URL = import.meta.env.VITE_API_URL || "";
       // Use relative URL for proxy
-      const url = `/api/pm2/${selectedServer._id}/${nameOrId}/logs/stream?token=${token}`;
+      const url = `${API_URL}/api/pm2/${selectedServer._id}/${nameOrId}/logs/stream?token=${token}`;
 
       const es = new EventSource(url);
       eventSourceRef.current = es;

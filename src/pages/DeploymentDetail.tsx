@@ -381,7 +381,8 @@ const DeploymentDetail: React.FC = () => {
   // SSE: listen for live log & status updates via EventSource
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
-    const url = `/api/deployments/${projectId}/stream${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+    const API_URL = import.meta.env.VITE_API_URL || "";
+    const url = `${API_URL}/api/deployments/${projectId}/stream${token ? `?token=${encodeURIComponent(token)}` : ""}`;
     const es = new EventSource(url);
 
     es.addEventListener("log", (e) => {
@@ -591,7 +592,7 @@ const DeploymentDetail: React.FC = () => {
   }, []);
 
   const copyWebhookUrl = useCallback(() => {
-    const url = `${window.location.origin}/api/webhook/${projectId}`;
+    const url = `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${projectId}`;
     navigator.clipboard.writeText(url);
     toast.success("Webhook URL copied!");
   }, [projectId]);
