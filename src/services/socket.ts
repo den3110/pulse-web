@@ -6,8 +6,9 @@ export const connectSocket = (): Socket => {
   if (socket?.connected) return socket;
 
   const token = localStorage.getItem("accessToken");
+  const SOCKET_URL = import.meta.env.VITE_API_URL || "/";
 
-  socket = io("/", {
+  socket = io(SOCKET_URL, {
     auth: { token },
     transports: ["websocket", "polling"],
   });
