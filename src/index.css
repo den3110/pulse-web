@@ -1,0 +1,209 @@
+/* Minimal global styles - MUI handles most styling */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Event Stream Log Viewer */
+.terminal-body {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 0 16px 16px;
+  max-height: 500px;
+  overflow-y: auto;
+  background: var(--terminal-bg, #0d1117);
+  color: var(--terminal-text, #e6edf3);
+  position: relative;
+}
+
+@media (max-width: 600px) {
+  .terminal-body {
+    font-size: 10px;
+    max-height: 300px;
+    padding: 0 10px 10px;
+  }
+  .log-line {
+    gap: 6px;
+  }
+  .log-time {
+    font-size: 9px;
+  }
+}
+
+.terminal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+/* Individual event entry */
+.log-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 4px 0;
+  word-break: break-all;
+  white-space: pre-wrap;
+  position: relative;
+  animation: fadeInLog 0.2s ease-out;
+}
+
+@keyframes fadeInLog {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Timeline dot */
+.log-line::before {
+  content: "";
+  min-width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+  border: 1.5px solid transparent;
+}
+
+/* Timeline connecting line */
+.log-line::after {
+  content: "";
+  position: absolute;
+  left: 3.5px;
+  top: 18px;
+  width: 1px;
+  height: calc(100% - 6px);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.log-line:last-child::after {
+  display: none;
+}
+
+/* Event type colors */
+.log-line.info::before {
+  background: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.log-line.success::before {
+  background: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.log-line.warning::before {
+  background: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.log-line.error::before {
+  background: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Text colors per type */
+.log-line.info {
+  color: #c9d1d9;
+}
+.log-line.success {
+  color: #10b981;
+}
+.log-line.warning {
+  color: #f59e0b;
+}
+.log-line.error {
+  color: #ef4444;
+}
+
+/* Step headers (lines with emoji indicators) */
+.log-line.step-header {
+  padding: 8px 10px;
+  margin: 8px 0 2px;
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 6px;
+  border-left: 2px solid #6366f1;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.log-line.step-header::before {
+  background: #6366f1;
+  border-color: rgba(99, 102, 241, 0.4);
+  min-width: 10px;
+  height: 10px;
+  margin-top: 4px;
+}
+
+.log-line.step-header::after {
+  left: 4px;
+}
+
+/* Timestamp */
+.log-time {
+  color: #4b5563;
+  font-size: 10px;
+  min-width: 60px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Log content */
+.log-content {
+  flex: 1;
+  min-width: 0;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}
+
+/* Scrollbar global */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

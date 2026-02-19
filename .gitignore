@@ -1,0 +1,7 @@
+node_modules
+dist
+tsc_output.txt
+.env
+.DS_Store
+*.log
+coverage
