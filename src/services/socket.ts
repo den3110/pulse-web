@@ -8,10 +8,26 @@ export const connectSocket = (): Socket => {
   const token = localStorage.getItem("accessToken");
   const SOCKET_URL = import.meta.env.VITE_API_URL || "/";
 
-  socket = io(SOCKET_URL, {
+  let url = SOCKET_URL;
+  let options: any = {
     auth: { token },
     transports: ["websocket", "polling"],
-  });
+  };
+
+  // If URL has path, use it as base path for socket.io
+  if (SOCKET_URL.startsWith("http")) {
+    try {
+      const urlObj = new URL(SOCKET_URL);
+      url = urlObj.origin;
+      if (urlObj.pathname && urlObj.pathname !== "/") {
+        options.path = `${urlObj.pathname.replace(/\/$/, "")}/socket.io`;
+      }
+    } catch (e) {
+      console.error("[Socket] Invalid URL:", SOCKET_URL);
+    }
+  }
+
+  socket = io(url, options);
 
   socket.on("connect", () => {
     console.log("[Socket] Connected:", socket?.id);
