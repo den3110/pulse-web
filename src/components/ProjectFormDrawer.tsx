@@ -291,6 +291,7 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
         buildCommand: data.buildCommand || prev.buildCommand,
         startCommand: data.startCommand || prev.startCommand,
         buildOutputDir: data.outputDir || prev.buildOutputDir,
+        autoDeploy: true,
       }));
       toast.success(
         `Imported ${repo.name} — ${data.type !== "unknown" ? data.type : "Generic project"}`,
@@ -305,6 +306,7 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
         name: repo.name,
         repoUrl: repo.html_url || repo.htmlUrl || "",
         branch: repo.default_branch || repo.defaultBranch || "main",
+        autoDeploy: true,
       }));
     } finally {
       setAnalyzingRepo(false);
