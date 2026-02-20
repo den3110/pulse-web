@@ -340,7 +340,7 @@ const NginxManager: React.FC<{ hideHeader?: boolean }> = ({
               {t("nginx.title")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {t("nginx.subtitle")}
+              {t("nginx.subtitle", { server: selectedServer?.name })}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
@@ -459,29 +459,34 @@ const NginxManager: React.FC<{ hideHeader?: boolean }> = ({
 
           {loading ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              {[0, 1, 2, 3].map((i) => (
+              {[0, 1, 2].map((i) => (
                 <Box
                   key={i}
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    p: 1.5,
+                    p: { xs: 1.5, md: 2 },
                     borderRadius: 2,
                     border: "1px solid rgba(255,255,255,0.06)",
+                    gap: 1.5,
                   }}
                 >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1.5,
-                      flex: 1,
-                    }}
-                  >
-                    <Skeleton variant="circular" width={8} height={8} />
-                    <Skeleton variant="text" width={140} height={22} />
-                    <Skeleton variant="rounded" width={60} height={20} />
+                  <Skeleton variant="circular" width={8} height={8} />
+                  <Box sx={{ flex: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        alignItems: "center",
+                        mb: 0.5,
+                      }}
+                    >
+                      <Skeleton variant="text" width={120} height={22} />
+                      <Skeleton variant="rounded" width={52} height={20} />
+                    </Box>
+                    <Box sx={{ display: "flex", gap: 2 }}>
+                      <Skeleton variant="text" width={200} height={16} />
+                    </Box>
                   </Box>
                   <Box sx={{ display: "flex", gap: 0.5 }}>
                     <Skeleton variant="circular" width={28} height={28} />

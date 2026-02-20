@@ -261,8 +261,15 @@ const Dashboard: React.FC = () => {
             <Typography variant="h6" sx={{ mb: 2, fontSize: 16 }}>
               {t("dashboard.deploymentsChart")}
             </Typography>
-            <Box sx={{ width: "100%", height: 220 }}>
-              <ResponsiveContainer>
+            <Box
+              sx={{
+                width: "100%",
+                height: 220,
+                minWidth: 200,
+                position: "relative",
+              }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={stats.deployChart}>
                   <defs>
                     <linearGradient

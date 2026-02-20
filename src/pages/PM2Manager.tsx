@@ -440,7 +440,7 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
               {t("pm2.title")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {t("pm2.subtitle")}
+              {t("pm2.subtitle", { server: selectedServer?.name })}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>

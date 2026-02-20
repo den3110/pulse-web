@@ -13,7 +13,12 @@ export interface Server {
   _id: string;
   name: string;
   host: string;
+  port: number;
+  username: string;
+  authType: "password" | "key";
   status: "online" | "offline" | "unknown";
+  lastCheckedAt?: string;
+  order?: number;
 }
 
 interface ServerContextType {
@@ -22,6 +27,7 @@ interface ServerContextType {
   selectServer: (serverId: string) => void;
   loading: boolean;
   refreshServers: () => Promise<void>;
+  setServers: React.Dispatch<React.SetStateAction<Server[]>>;
 }
 
 const ServerContext = createContext<ServerContextType | undefined>(undefined);
@@ -118,6 +124,7 @@ export const ServerProvider: React.FC<{ children: React.ReactNode }> = ({
         selectServer,
         loading,
         refreshServers: fetchServers,
+        setServers,
       }}
     >
       {children}

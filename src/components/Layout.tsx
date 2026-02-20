@@ -286,10 +286,17 @@ const Layout: React.FC = () => {
   );
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
+    <Box
+      sx={{
+        display: "flex",
+        minHeight: "100vh",
+        flexDirection: sidebarPosition === "right" ? "row-reverse" : "row",
+      }}
+    >
       {/* Mobile drawer */}
       <Drawer
         variant="temporary"
+        anchor={sidebarPosition}
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
         sx={{
@@ -372,7 +379,7 @@ const Layout: React.FC = () => {
                 <MenuIcon />
               </IconButton>
             )}
-            <Typography variant="h6" sx={{ flex: 1, fontSize: 20 }}>
+            <Typography variant="h6" noWrap sx={{ flex: 1, fontSize: 20 }}>
               {getPageTitle()}
             </Typography>
 

@@ -120,4 +120,52 @@ api.interceptors.response.use(
   },
 );
 
-export default api;
+// Define the API object
+const apiService = {
+  // Expose the axios instance if needed (e.g. for interceptors in other files)
+  client: api,
+
+  // Server Operations
+  getServers: () => api.get("/servers"),
+  getServer: (id: string) => api.get(`/servers/${id}`),
+  createServer: (data: any) => api.post("/servers", data),
+  updateServer: (id: string, data: any) => api.put(`/servers/${id}`, data),
+  deleteServer: (id: string) => api.delete(`/servers/${id}`),
+  testConnection: (id: string) => api.post(`/servers/${id}/test`),
+  getServerProjects: (id: string) => api.get(`/servers/${id}/projects`),
+  getServerStats: (id: string) => api.get(`/servers/${id}/stats`),
+  getStatsHistory: (id: string) => api.get(`/servers/${id}/stats/history`),
+  execCommand: (id: string, command: string, timeout?: number) =>
+    api.post(`/servers/${id}/exec`, { command, timeout }),
+  reorderServers: (ids: string[]) => api.put("/servers/reorder", { ids }),
+
+  // Projects
+  getProjects: () => api.get("/projects"),
+  getProject: (id: string) => api.get(`/projects/${id}`),
+  createProject: (data: any) => api.post("/projects", data),
+  updateProject: (id: string, data: any) => api.put(`/projects/${id}`, data),
+  deleteProject: (id: string, password?: string) =>
+    api.delete(`/projects/${id}`, { data: { password } }),
+  saveAndRestart: (id: string, data: any) =>
+    api.put(`/projects/${id}/save-restart`, data),
+  deleteOutput: (id: string) => api.delete(`/projects/${id}/output`),
+  reorderProjects: (ids: string[]) => api.put("/projects/reorder", { ids }),
+
+  // Auth (if needed explicitly)
+  login: (data: any) => api.post("/auth/login", data),
+  register: (data: any) => api.post("/auth/register", data),
+  logout: () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    window.location.href = "/login";
+  },
+
+  // Generic methods if needed
+  get: api.get,
+  post: api.post,
+  put: api.put,
+  delete: api.delete,
+  patch: api.patch,
+};
+
+export default apiService;

@@ -128,11 +128,11 @@ const ActivityLog: React.FC = () => {
       <Box
         sx={{
           display: "flex",
-          justifyContent: "space-between",
           alignItems: { xs: "flex-start", sm: "center" },
+          justifyContent: "space-between",
           mb: 3,
           flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
+          gap: { xs: 2, sm: 0 },
         }}
       >
         <Box>
@@ -165,9 +165,38 @@ const ActivityLog: React.FC = () => {
       <Card>
         <CardContent sx={{ p: 0 }}>
           {loading ? (
-            <Box sx={{ p: 3 }}>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} height={50} sx={{ mb: 1 }} />
+            <Box
+              sx={{ display: "flex", flexDirection: "column", gap: 1, p: 2 }}
+            >
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Box
+                  key={i}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    p: 2,
+                    borderRadius: 2,
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    gap: 1.5,
+                  }}
+                >
+                  <Skeleton variant="circular" width={8} height={8} />
+                  <Box sx={{ flex: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        alignItems: "center",
+                        mb: 0.5,
+                      }}
+                    >
+                      <Skeleton variant="rounded" width={80} height={20} />
+                      <Skeleton variant="text" width={100} height={20} />
+                    </Box>
+                    <Skeleton variant="text" width="60%" height={16} />
+                  </Box>
+                  <Skeleton variant="text" width={120} height={16} />
+                </Box>
               ))}
             </Box>
           ) : activities.length === 0 ? (

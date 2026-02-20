@@ -100,7 +100,8 @@
     "darkMode": "Dark mode",
     "created": "Created",
     "more": "More",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "reorderFailed": "Failed to reorder items"
   },
   "auth": {
     "login": "Login",
@@ -142,7 +143,8 @@
     "selectServerToViewStats": "Select a server to view system resources"
   },
   "servers": {
-    "title": "Manage your VPS servers",
+    "title": "Servers",
+    "subtitle": "Manage your VPS servers",
     "count": "{{count}} server(s)",
     "addServer": "Add Server",
     "searchPlaceholder": "Search servers...",
@@ -184,6 +186,7 @@
   },
   "users": {
     "title": "User Management",
+    "subtitle": "Manage users and roles",
     "count": "{{count}} users",
     "addUser": "Add User",
     "noUsers": "No users found",
@@ -218,7 +221,8 @@
     }
   },
   "projects": {
-    "title": "Manage your projects",
+    "title": "Projects",
+    "subtitle": "Manage your Git projects",
     "count": "{{count}} project(s)",
     "addProject": "Add Project",
     "searchPlaceholder": "Search projects...",
@@ -430,6 +434,7 @@
   },
   "ftp": {
     "title": "File Manager",
+    "subtitle": "Manage files and directories on {{server}}",
     "server": "Server",
     "hiddenFiles": "Hidden files",
     "upload": "Upload",
@@ -584,5 +589,9 @@
       "onDay": "On which day?",
       "minutes": "Minute (0-59)"
     }
+  },
+  "ports": {
+    "title": "Port Manager",
+    "subtitle": "Manage open ports and firewall rules on {{server}}"
   }
 }

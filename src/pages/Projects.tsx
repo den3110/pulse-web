@@ -36,6 +36,7 @@ import FolderIcon from "@mui/icons-material/Folder";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ContentPasteIcon from "@mui/icons-material/ContentPaste";
+import Drawer from "@mui/material/Drawer";
 import StopIcon from "@mui/icons-material/Stop";
 import SearchIcon from "@mui/icons-material/Search";
 import Skeleton from "@mui/material/Skeleton";
@@ -43,6 +44,23 @@ import CircularProgress from "@mui/material/CircularProgress";
 import InputAdornment from "@mui/material/InputAdornment";
 import FolderBrowserDialog from "../components/FolderBrowserDialog";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import SEO from "../components/SEO";
 
@@ -52,6 +70,7 @@ interface Server {
   host: string;
   status: string;
 }
+
 interface Project {
   _id: string;
   name: string;
@@ -73,6 +92,45 @@ interface Project {
   processManager: "nohup" | "pm2";
   lastDeployedAt?: string;
   envVars?: Record<string, string>;
+}
+
+interface SortableProjectGridItemProps {
+  id: string;
+  children: React.ReactNode;
+}
+
+function SortableProjectGridItem({
+  id,
+  children,
+}: SortableProjectGridItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 999 : "auto",
+  };
+
+  return (
+    <Grid
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      size={{ xs: 12, sm: 6, lg: 4 }}
+      className="project-grid-item"
+    >
+      {children}
+    </Grid>
+  );
 }
 
 const statusColor: Record<string, "success" | "error" | "warning" | "default"> =
@@ -157,6 +215,40 @@ const Projects: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      setProjects((items) => {
+        const oldIndex = items.findIndex((item) => item._id === active.id);
+        const newIndex = items.findIndex((item) => item._id === over?.id);
+        const newItems = arrayMove(items, oldIndex, newIndex);
+
+        // Optimistic update
+        // We need to persist order.
+        const ids = newItems.map((p) => p._id);
+        api.reorderProjects(ids).catch((err) => {
+          console.error("Failed to reorder projects", err);
+          toast.error(t("common.reorderFailed") || "Reorder failed");
+          fetchData(); // Revert
+        });
+
+        return newItems;
+      });
+    }
+  };
 
   // Socket.io integration for realtime updates
   useEffect(() => {
@@ -370,20 +462,44 @@ const Projects: React.FC = () => {
 
   if (loading)
     return (
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 0 }}>
         <Skeleton
           variant="rectangular"
           height={40}
-          sx={{ mb: 2, borderRadius: 1 }}
+          width="100%"
+          sx={{ mb: 3, borderRadius: 1, maxWidth: 300 }}
         />
         <Grid container spacing={2.5}>
           {[1, 2, 3].map((i) => (
             <Grid size={{ xs: 12, md: 6, lg: 4 }} key={i}>
-              <Skeleton
-                variant="rectangular"
-                height={200}
-                sx={{ borderRadius: 2 }}
-              />
+              <Card variant="outlined" sx={{ height: "100%", p: 2 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mb: 2,
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <Skeleton variant="circular" width={40} height={40} />
+                    <Box>
+                      <Skeleton variant="text" width={120} height={24} />
+                      <Skeleton variant="text" width={80} height={16} />
+                    </Box>
+                  </Box>
+                  <Skeleton variant="circular" width={24} height={24} />
+                </Box>
+                <Skeleton
+                  variant="rectangular"
+                  height={60}
+                  sx={{ mb: 2, borderRadius: 1 }}
+                />
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <Skeleton variant="text" width={60} height={20} />
+                  <Skeleton variant="text" width={60} height={20} />
+                  <Skeleton variant="text" width={60} height={20} />
+                </Box>
+              </Card>
             </Grid>
           ))}
         </Grid>
@@ -501,249 +617,262 @@ const Projects: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <Grid container spacing={{ xs: 2, md: 2.5 }} className="projects-grid">
-          {filteredProjects.map((project) => (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={filteredProjects.map((p) => p._id)}
+            strategy={rectSortingStrategy}
+          >
             <Grid
-              key={project._id}
-              size={{ xs: 12, sm: 6, lg: 4 }}
-              className="project-grid-item"
+              container
+              spacing={{ xs: 2, md: 2.5 }}
+              className="projects-grid"
             >
-              <Card
-                className={`project-card project-status-${project.status}`}
-                sx={{
-                  height: "100%",
-                  overflow: "hidden",
-                  maxWidth: "100%",
-                  transition: "all 0.25s ease",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-                  },
-                }}
-              >
-                <CardContent
-                  sx={{ p: { xs: 2, md: 3 }, overflow: "hidden" }}
-                  className="project-card-content"
-                >
-                  <Box
-                    className="project-card-header"
+              {filteredProjects.map((project) => (
+                <SortableProjectGridItem key={project._id} id={project._id}>
+                  <Card
+                    className={`project-card project-status-${project.status}`}
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      mb: 1,
+                      height: "100%",
+                      overflow: "hidden",
+                      maxWidth: "100%",
+                      transition: "all 0.25s ease",
+                      "&:hover": {
+                        transform: "translateY(-4px)",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+                      },
                     }}
                   >
-                    <Box
-                      className="project-identity"
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        minWidth: 0,
-                        flex: 1,
-                      }}
+                    <CardContent
+                      sx={{ p: { xs: 2, md: 3 }, overflow: "hidden" }}
+                      className="project-card-content"
                     >
-                      <FolderIcon
-                        sx={{ color: "primary.main", flexShrink: 0 }}
-                        className="project-icon"
-                      />
-                      <Typography
-                        variant="subtitle1"
-                        fontWeight={600}
-                        className="project-name"
+                      <Box
+                        className="project-card-header"
                         sx={{
-                          cursor: "pointer",
-                          "&:hover": {
-                            color: "primary.light",
-                            textDecoration: "underline",
-                          },
-                          transition: "color 0.2s",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          fontSize: { xs: 14, md: 16 },
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          mb: 1,
                         }}
-                        onClick={() =>
-                          navigate(`/projects/${project._id}/deploy`)
-                        }
                       >
-                        {project.name}
-                      </Typography>
-                    </Box>
-                    <Chip
-                      label={project.status}
-                      size="small"
-                      color={statusColor[project.status] || "default"}
-                      variant="outlined"
-                      className={`project-status-chip status-${project.status}`}
-                    />
-                  </Box>
-
-                  <Typography
-                    variant="body2"
-                    className="project-repo-url"
-                    sx={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      color: "text.secondary",
-                      fontSize: { xs: 10, md: 12 },
-                      mb: 0.5,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {project.repoUrl}
-                  </Typography>
-
-                  <Box
-                    className="project-tags"
-                    sx={{
-                      display: "flex",
-                      gap: 1,
-                      mb: 1.5,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <Chip
-                      label={project.branch}
-                      size="small"
-                      variant="outlined"
-                      className="project-branch-chip"
-                      sx={{ fontSize: 11 }}
-                    />
-                    <Chip
-                      label={project.server?.name || "No server"}
-                      size="small"
-                      variant="outlined"
-                      className={`project-server-chip server-${project.server?.status}`}
-                      color={
-                        project.server?.status === "online"
-                          ? "success"
-                          : "default"
-                      }
-                      sx={{ fontSize: 11 }}
-                    />
-                    {project.autoDeploy && (
-                      <Tooltip title="Auto-deploy enabled — checks for new commits every 60s">
+                        <Box
+                          className="project-identity"
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            minWidth: 0,
+                            flex: 1,
+                          }}
+                        >
+                          <FolderIcon
+                            sx={{ color: "primary.main", flexShrink: 0 }}
+                            className="project-icon"
+                          />
+                          <Typography
+                            variant="subtitle1"
+                            fontWeight={600}
+                            className="project-name"
+                            sx={{
+                              cursor: "pointer",
+                              "&:hover": {
+                                color: "primary.light",
+                                textDecoration: "underline",
+                              },
+                              transition: "color 0.2s",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              fontSize: { xs: 14, md: 16 },
+                            }}
+                            onClick={() =>
+                              navigate(`/projects/${project._id}/deploy`)
+                            }
+                          >
+                            {project.name}
+                          </Typography>
+                        </Box>
                         <Chip
-                          icon={
-                            <AutoFixHighIcon
-                              sx={{ fontSize: "14px !important" }}
-                            />
-                          }
-                          label="Auto-deploy"
+                          label={project.status}
                           size="small"
-                          color="info"
+                          color={statusColor[project.status] || "default"}
                           variant="outlined"
-                          className="project-autodeploy-chip"
-                          sx={{ fontSize: 11 }}
+                          className={`project-status-chip status-${project.status}`}
                         />
-                      </Tooltip>
-                    )}
-                  </Box>
-
-                  <Typography
-                    variant="body2"
-                    className="project-deploy-path"
-                    sx={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      color: "text.secondary",
-                      fontSize: 11,
-                      mb: 2,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    📁 {project.deployPath}
-                  </Typography>
-
-                  {project.lastDeployedAt && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      display="block"
-                      className="project-last-deployed"
-                      sx={{ mb: 1 }}
-                    >
-                      {t("deploy.lastDeployed")}:{" "}
-                      {new Date(project.lastDeployedAt).toLocaleString("vi-VN")}
-                    </Typography>
-                  )}
-
-                  {/* Webhook URL / Secret Display */}
-                  <Box
-                    className="project-webhook-box"
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 0.5,
-                      mb: 2,
-                      p: 1,
-                      bgcolor: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? "rgba(0,0,0,0.3)"
-                          : "action.hover",
-                      borderRadius: 1,
-                      border: "1px solid",
-                      borderColor: "divider",
-                      overflow: "hidden",
-                      minWidth: 0,
-                    }}
-                  >
-                    <Box
-                      className="webhook-content"
-                      sx={{
-                        flex: 1,
-                        overflow: "hidden",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                      }}
-                    >
-                      <Box component="span" sx={{ fontSize: 14 }}>
-                        {visibleSecrets[project._id] ? "🔑" : "🔗"}
                       </Box>
+
                       <Typography
-                        variant="caption"
-                        className="webhook-text"
+                        variant="body2"
+                        className="project-repo-url"
                         sx={{
                           fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 11,
-                          color: "text.primary",
+                          color: "text.secondary",
+                          fontSize: { xs: 10, md: 12 },
+                          mb: 0.5,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {visibleSecrets[project._id]
-                          ? visibleSecrets[project._id]
-                          : `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${project._id}`}
+                        {project.repoUrl}
                       </Typography>
-                    </Box>
 
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        const text = visibleSecrets[project._id]
-                          ? visibleSecrets[project._id]
-                          : `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${project._id}`;
-                        navigator.clipboard.writeText(text);
-                        toast.success(
-                          visibleSecrets[project._id]
-                            ? "Secret Key copied!"
-                            : "Webhook URL copied!",
-                        );
-                      }}
-                      sx={{ p: 0.3, color: "text.secondary", ml: 0.5 }}
-                      title={
-                        visibleSecrets[project._id] ? "Copy Secret" : "Copy URL"
-                      }
-                    >
-                      <ContentCopyIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-                    {/* <Box
+                      <Box
+                        className="project-tags"
+                        sx={{
+                          display: "flex",
+                          gap: 1,
+                          mb: 1.5,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <Chip
+                          label={project.branch}
+                          size="small"
+                          variant="outlined"
+                          className="project-branch-chip"
+                          sx={{ fontSize: 11 }}
+                        />
+                        <Chip
+                          label={project.server?.name || "No server"}
+                          size="small"
+                          variant="outlined"
+                          className={`project-server-chip server-${project.server?.status}`}
+                          color={
+                            project.server?.status === "online"
+                              ? "success"
+                              : "default"
+                          }
+                          sx={{ fontSize: 11 }}
+                        />
+                        {project.autoDeploy && (
+                          <Tooltip title="Auto-deploy enabled — checks for new commits every 60s">
+                            <Chip
+                              icon={
+                                <AutoFixHighIcon
+                                  sx={{ fontSize: "14px !important" }}
+                                />
+                              }
+                              label="Auto-deploy"
+                              size="small"
+                              color="info"
+                              variant="outlined"
+                              className="project-autodeploy-chip"
+                              sx={{ fontSize: 11 }}
+                            />
+                          </Tooltip>
+                        )}
+                      </Box>
+
+                      <Typography
+                        variant="body2"
+                        className="project-deploy-path"
+                        sx={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          color: "text.secondary",
+                          fontSize: 11,
+                          mb: 2,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        📁 {project.deployPath}
+                      </Typography>
+
+                      {project.lastDeployedAt && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                          className="project-last-deployed"
+                          sx={{ mb: 1 }}
+                        >
+                          {t("deploy.lastDeployed")}:{" "}
+                          {new Date(project.lastDeployedAt).toLocaleString(
+                            "vi-VN",
+                          )}
+                        </Typography>
+                      )}
+
+                      {/* Webhook URL / Secret Display */}
+                      <Box
+                        className="project-webhook-box"
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 0.5,
+                          mb: 2,
+                          p: 1,
+                          bgcolor: (theme) =>
+                            theme.palette.mode === "dark"
+                              ? "rgba(0,0,0,0.3)"
+                              : "action.hover",
+                          borderRadius: 1,
+                          border: "1px solid",
+                          borderColor: "divider",
+                          overflow: "hidden",
+                          minWidth: 0,
+                        }}
+                      >
+                        <Box
+                          className="webhook-content"
+                          sx={{
+                            flex: 1,
+                            overflow: "hidden",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                          }}
+                        >
+                          <Box component="span" sx={{ fontSize: 14 }}>
+                            {visibleSecrets[project._id] ? "🔑" : "🔗"}
+                          </Box>
+                          <Typography
+                            variant="caption"
+                            className="webhook-text"
+                            sx={{
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: 11,
+                              color: "text.primary",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {visibleSecrets[project._id]
+                              ? visibleSecrets[project._id]
+                              : `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${project._id}`}
+                          </Typography>
+                        </Box>
+
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            const text = visibleSecrets[project._id]
+                              ? visibleSecrets[project._id]
+                              : `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${project._id}`;
+                            navigator.clipboard.writeText(text);
+                            toast.success(
+                              visibleSecrets[project._id]
+                                ? "Secret Key copied!"
+                                : "Webhook URL copied!",
+                            );
+                          }}
+                          sx={{ p: 0.3, color: "text.secondary", ml: 0.5 }}
+                          title={
+                            visibleSecrets[project._id]
+                              ? "Copy Secret"
+                              : "Copy URL"
+                          }
+                        >
+                          <ContentCopyIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
+                        {/* <Box
                       sx={{
                         width: 1,
                         height: 14,
@@ -751,147 +880,162 @@ const Projects: React.FC = () => {
                         mx: 0.5,
                       }}
                     /> */}
-                    <IconButton
-                      size="small"
-                      onClick={() => handleToggleSecret(project._id)}
-                      sx={{
-                        p: 0.3,
-                        color: visibleSecrets[project._id]
-                          ? "primary.main"
-                          : "warning.main",
-                      }}
-                      title={
-                        visibleSecrets[project._id]
-                          ? "Show URL"
-                          : "Show Secret Key"
-                      }
-                    >
+                        <IconButton
+                          size="small"
+                          onClick={() => handleToggleSecret(project._id)}
+                          sx={{
+                            p: 0.3,
+                            color: visibleSecrets[project._id]
+                              ? "primary.main"
+                              : "warning.main",
+                          }}
+                          title={
+                            visibleSecrets[project._id]
+                              ? "Show URL"
+                              : "Show Secret Key"
+                          }
+                        >
+                          <Box
+                            sx={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              border: "1px solid currentColor",
+                              borderRadius: 0.5,
+                              px: 0.5,
+                              height: 18,
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            {visibleSecrets[project._id] ? "URL" : "KEY"}
+                          </Box>
+                        </IconButton>
+                      </Box>
+
                       <Box
+                        className="project-actions"
                         sx={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          border: "1px solid currentColor",
-                          borderRadius: 0.5,
-                          px: 0.5,
-                          height: 18,
                           display: "flex",
-                          alignItems: "center",
+                          gap: { xs: 0.5, md: 1 },
+                          flexWrap: "wrap",
                         }}
                       >
-                        {visibleSecrets[project._id] ? "URL" : "KEY"}
-                      </Box>
-                    </IconButton>
-                  </Box>
-
-                  <Box
-                    className="project-actions"
-                    sx={{
-                      display: "flex",
-                      gap: { xs: 0.5, md: 1 },
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    {[
-                      "running",
-                      "deploying",
-                      "building",
-                      "cloning",
-                      "installing",
-                      "starting",
-                    ].includes(project.status) ? (
-                      <>
-                        <Button
+                        {[
+                          "running",
+                          "deploying",
+                          "building",
+                          "cloning",
+                          "installing",
+                          "starting",
+                        ].includes(project.status) ? (
+                          <>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="info"
+                              startIcon={<TerminalIcon />}
+                              onClick={() =>
+                                navigate(`/projects/${project._id}/deploy`)
+                              }
+                              className="action-btn-console"
+                            >
+                              Console
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              startIcon={<StopIcon />}
+                              onClick={() => setConfirmStop(project)}
+                              disabled={project.status !== "running"}
+                              className="action-btn-stop"
+                            >
+                              Stop
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              startIcon={<RocketLaunchIcon />}
+                              onClick={() => handleDeploy(project._id)}
+                              className="action-btn-deploy"
+                            >
+                              {t("common.deploy")}
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<TerminalIcon />}
+                              onClick={() =>
+                                navigate(`/projects/${project._id}/deploy`)
+                              }
+                              className="action-btn-logs"
+                            >
+                              Logs
+                            </Button>
+                          </>
+                        )}
+                        <Box sx={{ flex: 1 }} />
+                        <IconButton
                           size="small"
-                          variant="contained"
-                          color="info"
-                          startIcon={<TerminalIcon />}
-                          onClick={() =>
-                            navigate(`/projects/${project._id}/deploy`)
-                          }
-                          className="action-btn-console"
+                          onClick={() => openEdit(project)}
+                          className="action-btn-edit"
                         >
-                          Console
-                        </Button>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
                         <Button
                           size="small"
                           variant="outlined"
                           color="error"
-                          startIcon={<StopIcon />}
-                          onClick={() => setConfirmStop(project)}
-                          disabled={project.status !== "running"}
-                          className="action-btn-stop"
+                          startIcon={<DeleteForeverIcon />}
+                          onClick={() => setConfirmDelete(project)}
+                          sx={{ minWidth: "auto" }}
+                          className="action-btn-delete"
                         >
-                          Stop
+                          {t("common.delete")}
                         </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          startIcon={<RocketLaunchIcon />}
-                          onClick={() => handleDeploy(project._id)}
-                          className="action-btn-deploy"
-                        >
-                          {t("common.deploy")}
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<TerminalIcon />}
-                          onClick={() =>
-                            navigate(`/projects/${project._id}/deploy`)
-                          }
-                          className="action-btn-logs"
-                        >
-                          Logs
-                        </Button>
-                      </>
-                    )}
-                    <Box sx={{ flex: 1 }} />
-                    <IconButton
-                      size="small"
-                      onClick={() => openEdit(project)}
-                      className="action-btn-edit"
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="error"
-                      startIcon={<DeleteForeverIcon />}
-                      onClick={() => setConfirmDelete(project)}
-                      sx={{ minWidth: "auto" }}
-                      className="action-btn-delete"
-                    >
-                      {t("common.delete")}
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </SortableProjectGridItem>
+              ))}
             </Grid>
-          ))}
-        </Grid>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Create/Edit Dialog */}
-      <Dialog
+      <Drawer
         open={showModal}
         onClose={() => setShowModal(false)}
-        maxWidth="sm"
-        fullWidth
-        fullScreen={isMobile}
-        className="project-dialog"
+        anchor="right"
       >
-        <form onSubmit={handleSubmit} className="project-form">
-          <DialogTitle className="project-dialog-title">
-            {editing ? t("common.edit") : t("projects.addProject")}
-          </DialogTitle>
-          <DialogContent
-            sx={{ pt: "16px !important" }}
-            className="project-dialog-content"
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{ width: { xs: "100%", sm: 500, md: 600 }, p: 0 }}
+          role="presentation"
+        >
+          <Box
+            sx={{
+              p: 3,
+              pt: 4,
+              borderBottom: 1,
+              borderColor: "divider",
+              position: "sticky",
+              top: 0,
+              bgcolor: "background.paper",
+              zIndex: 10,
+            }}
           >
+            <Typography variant="h6">
+              {editing ? t("projects.editProject") : t("projects.addProject")}
+            </Typography>
+          </Box>
+
+          <Box sx={{ p: 3, height: "100%", overflowY: "auto" }}>
             <TextField
               label={t("common.name")}
               placeholder="My App"
@@ -914,54 +1058,42 @@ const Projects: React.FC = () => {
                 label={t("common.server")}
                 onChange={(e) => setForm({ ...form, server: e.target.value })}
                 required
-                className="select-project-server"
+                className="select-server"
               >
-                {servers.map((s) => (
-                  <MenuItem
-                    key={s._id}
-                    value={s._id}
-                    className={`server-item item-${s.status}`}
-                  >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          bgcolor:
-                            s.status === "online"
-                              ? "success.main"
-                              : "text.disabled",
-                        }}
-                      />
-                      {s.name} ({s.host})
-                    </Box>
+                {servers.map((server) => (
+                  <MenuItem key={server._id} value={server._id}>
+                    {server.name} ({server.host})
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
 
-            {/* Repo URL */}
+            <TextField
+              label={t("common.name")}
+              placeholder="My Awesome App"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+              fullWidth
+              sx={{ mb: 2 }}
+              className="input-project-name"
+            />
+
             <TextField
               label={t("projects.repoUrl")}
-              placeholder="https://github.com/user/repo"
+              placeholder="https://github.com/username/repo.git"
               value={form.repoUrl}
               onChange={(e) => setForm({ ...form, repoUrl: e.target.value })}
               required
+              fullWidth
               sx={{ mb: 2 }}
               className="input-repo-url"
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <Tooltip title="Paste from clipboard">
+                    <Tooltip title="Paste from Clipboard">
                       <IconButton
-                        size="small"
+                        edge="end"
                         onClick={async () => {
                           try {
                             const text = await navigator.clipboard.readText();
@@ -1013,40 +1145,42 @@ const Projects: React.FC = () => {
                     sx={{ minWidth: 130, whiteSpace: "nowrap" }}
                     className="btn-detect-branch"
                   >
-                    Detect
+                    {detectingBranch ? "Detecting..." : t("projects.detect")}
                   </Button>
                 </span>
               </Tooltip>
             </Box>
 
-            {/* Repo Folder (for monorepo) */}
-            <TextField
-              label={t("projects.repoFolder")}
-              placeholder="frontend, packages/api, ..."
-              value={form.repoFolder}
-              onChange={(e) => setForm({ ...form, repoFolder: e.target.value })}
-              sx={{ mb: 2 }}
-              helperText={t("projects.repoFolderHint")}
-              className="input-repo-folder"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <Tooltip title={t("projects.browse")}>
-                      <span>
-                        <IconButton
-                          size="small"
-                          onClick={() => setFolderBrowserOpen(true)}
-                          disabled={!form.server || !form.repoUrl}
-                          className="btn-browse-folder"
-                        >
-                          <FolderOpenIcon fontSize="small" />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <Box sx={{ mb: 2, display: "flex", gap: 1 }}>
+              <TextField
+                label={t("projects.repoFolder")}
+                placeholder="docs (optional)"
+                value={form.repoFolder || ""}
+                onChange={(e) =>
+                  setForm({ ...form, repoFolder: e.target.value })
+                }
+                fullWidth
+                helperText={t("projects.repoFolderHint")}
+                className="input-repo-folder"
+              />
+              <Tooltip title={t("projects.browse")}>
+                <span>
+                  <Button
+                    variant="outlined"
+                    sx={{ minWidth: 40, height: 40, mt: 1 }}
+                    onClick={() => setFolderBrowserOpen(true)}
+                    disabled={
+                      !form.repoUrl ||
+                      !form.branch ||
+                      !form.server ||
+                      detectingBranch
+                    }
+                  >
+                    <FolderOpenIcon />
+                  </Button>
+                </span>
+              </Tooltip>
+            </Box>
 
             <FolderBrowserDialog
               open={folderBrowserOpen}
@@ -1067,6 +1201,7 @@ const Projects: React.FC = () => {
               value={form.deployPath}
               onChange={(e) => setForm({ ...form, deployPath: e.target.value })}
               required
+              fullWidth
               sx={{ mb: 2 }}
               helperText={t("projects.deployPathHint")}
               className="input-deploy-path"
@@ -1080,6 +1215,7 @@ const Projects: React.FC = () => {
               sx={{ mb: 2 }}
               helperText={t("projects.outputPathHint")}
               className="input-output-path"
+              fullWidth
             />
 
             <TextField
@@ -1092,6 +1228,7 @@ const Projects: React.FC = () => {
               sx={{ mb: 2 }}
               helperText={t("projects.buildOutputHint")}
               className="input-build-output-dir"
+              fullWidth
             />
 
             {/* Commands */}
@@ -1316,9 +1453,22 @@ const Projects: React.FC = () => {
                 )}
               </Typography>
             </Box>
-          </DialogContent>
-          <DialogActions
-            sx={{ px: 3, pb: 2 }}
+          </Box>
+
+          <Box
+            sx={{
+              p: 2,
+              px: 3,
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 2,
+              borderTop: 1,
+              borderColor: "divider",
+              position: "sticky",
+              bottom: 0,
+              bgcolor: "background.paper",
+              zIndex: 10,
+            }}
             className="project-dialog-actions"
           >
             <Button onClick={() => setShowModal(false)} className="btn-cancel">
@@ -1327,9 +1477,9 @@ const Projects: React.FC = () => {
             <Button type="submit" variant="contained" className="btn-submit">
               {editing ? t("common.update") : t("projects.addProject")}
             </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
+          </Box>
+        </Box>
+      </Drawer>
 
       {/* Confirm Delete Dialog */}
       <Dialog

@@ -112,7 +112,8 @@
     "darkMode": "Chế độ tối",
     "created": "Đã tạo",
     "more": "Khác",
-    "saving": "Đang lưu..."
+    "saving": "Đang lưu...",
+    "reorderFailed": "Sắp xếp thất bại"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -154,7 +155,8 @@
     "selectServerToViewStats": "Chọn server để xem tài nguyên"
   },
   "servers": {
-    "title": "Quản lý máy chủ VPS",
+    "title": "Máy chủ",
+    "subtitle": "Quản lý máy chủ VPS của bạn",
     "count": "{{count}} máy chủ",
     "addServer": "Thêm máy chủ",
     "searchPlaceholder": "Tìm kiếm máy chủ...",
@@ -196,6 +198,7 @@
   },
   "users": {
     "title": "Quản lý người dùng",
+    "subtitle": "Quản lý người dùng và vai trò",
     "count": "{{count}} người dùng",
     "addUser": "Thêm người dùng",
     "noUsers": "Không tìm thấy người dùng nào",
@@ -230,7 +233,8 @@
     }
   },
   "projects": {
-    "title": "Quản lý dự án",
+    "title": "Dự án",
+    "subtitle": "Quản lý các dự án Git",
     "count": "{{count}} dự án",
     "addProject": "Thêm dự án",
     "searchPlaceholder": "Tìm kiếm dự án...",
@@ -442,6 +446,7 @@
   },
   "ftp": {
     "title": "Quản lý tệp",
+    "subtitle": "Quản lý tệp và thư mục trên {{server}}",
     "server": "Máy chủ",
     "hiddenFiles": "Tệp ẩn",
     "upload": "Tải lên",
@@ -596,5 +601,9 @@
       "onDay": "Vào ngày nào?",
       "minutes": "Phút (0-59)"
     }
+  },
+  "ports": {
+    "title": "Quản lý Cổng",
+    "subtitle": "Quản lý cổng mở và tường lửa trên {{server}}"
   }
 }

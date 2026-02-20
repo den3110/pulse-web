@@ -251,7 +251,7 @@ const DatabaseManager: React.FC = () => {
         >
           <StorageIcon sx={{ color: "primary.main", fontSize: 32 }} />
           <Box>
-            <Typography variant="h5" fontWeight={700}>
+            <Typography variant="body1" fontWeight={500}>
               {t("database.title")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -289,14 +289,41 @@ const DatabaseManager: React.FC = () => {
       {tab === 0 ? (
         <>
           {loading && containers.length === 0 ? (
-            <Box sx={{ p: 2 }}>
-              {[1, 2, 3].map((i) => (
-                <Skeleton
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {[0, 1, 2].map((i) => (
+                <Box
                   key={i}
-                  variant="rectangular"
-                  height={60}
-                  sx={{ mb: 1, borderRadius: 1 }}
-                />
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    p: 2,
+                    borderRadius: 2,
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    gap: 1.5,
+                  }}
+                >
+                  <Skeleton variant="circular" width={8} height={8} />
+                  <Box sx={{ flex: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        alignItems: "center",
+                        mb: 0.5,
+                      }}
+                    >
+                      <Skeleton variant="text" width={120} height={22} />
+                      <Skeleton variant="rounded" width={52} height={20} />
+                    </Box>
+                    <Box sx={{ display: "flex", gap: 2 }}>
+                      <Skeleton variant="text" width={200} height={16} />
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: "flex", gap: 0.5 }}>
+                    <Skeleton variant="circular" width={28} height={28} />
+                    <Skeleton variant="circular" width={28} height={28} />
+                  </Box>
+                </Box>
               ))}
             </Box>
           ) : containers.length === 0 ? (
@@ -466,7 +493,34 @@ const DatabaseManager: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {backups.length === 0 ? (
+                {loading && backups.length === 0 ? (
+                  [0, 1, 2].map((i) => (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <Skeleton variant="text" width={150} />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton variant="text" width={120} />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton variant="text" width={60} />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            gap: 1,
+                          }}
+                        >
+                          <Skeleton variant="circular" width={28} height={28} />
+                          <Skeleton variant="circular" width={28} height={28} />
+                          <Skeleton variant="circular" width={28} height={28} />
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : backups.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                       <Typography color="text.secondary">
@@ -526,7 +580,49 @@ const DatabaseManager: React.FC = () => {
               gap: 1,
             }}
           >
-            {backups.length === 0 ? (
+            {loading && backups.length === 0 ? (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {[0, 1, 2].map((i) => (
+                  <Box
+                    key={i}
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      border: "1px solid rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    <Skeleton
+                      variant="text"
+                      width="60%"
+                      height={24}
+                      sx={{ mb: 1 }}
+                    />
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 1,
+                      }}
+                    >
+                      <Skeleton variant="text" width="40%" height={16} />
+                      <Skeleton variant="text" width="20%" height={16} />
+                    </Box>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        gap: 1,
+                      }}
+                    >
+                      <Skeleton variant="rounded" width={60} height={24} />
+                      <Skeleton variant="rounded" width={60} height={24} />
+                      <Skeleton variant="rounded" width={60} height={24} />
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            ) : backups.length === 0 ? (
               <Box
                 sx={{
                   p: 4,

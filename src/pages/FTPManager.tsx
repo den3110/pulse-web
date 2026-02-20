@@ -1425,12 +1425,12 @@ const FTPManager: React.FC = () => {
           gap: { xs: 2, sm: 0 },
         }}
       >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h5" fontWeight={700} noWrap>
+        <Box>
+          <Typography variant="body1" fontWeight={500}>
             {t("ftp.title")}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {t("ftp.selectServer")}
+            {t("ftp.subtitle", { server: selectedServer?.name })}
           </Typography>
         </Box>
         <Box
@@ -1963,24 +1963,39 @@ const FTPManager: React.FC = () => {
             isMobile ? (
               /* Mobile skeleton */
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                {[0, 1, 2, 3, 4, 5].map((i) => (
+                {[0, 1].map((i) => (
                   <Box
                     key={i}
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      p: 1.5,
+                      p: { xs: 1.5, md: 2 },
                       borderRadius: 2,
                       border: "1px solid rgba(255,255,255,0.06)",
                       gap: 1.5,
                     }}
                   >
-                    <Skeleton variant="circular" width={24} height={24} />
+                    <Skeleton variant="circular" width={8} height={8} />
                     <Box sx={{ flex: 1 }}>
-                      <Skeleton variant="text" width="50%" height={22} />
-                      <Skeleton variant="text" width={60} height={16} />
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 1,
+                          alignItems: "center",
+                          mb: 0.5,
+                        }}
+                      >
+                        <Skeleton variant="text" width={100} height={22} />
+                        <Skeleton variant="rounded" width={52} height={20} />
+                      </Box>
+                      <Box sx={{ display: "flex", gap: 2 }}>
+                        <Skeleton variant="text" width={150} height={16} />
+                      </Box>
                     </Box>
-                    <Skeleton variant="circular" width={28} height={28} />
+                    <Box sx={{ display: "flex", gap: 0.5 }}>
+                      <Skeleton variant="circular" width={28} height={28} />
+                      <Skeleton variant="circular" width={28} height={28} />
+                    </Box>
                   </Box>
                 ))}
               </Box>

@@ -156,11 +156,11 @@ const UserManagement: React.FC = () => {
       <Box
         sx={{
           display: "flex",
-          justifyContent: "space-between",
           alignItems: { xs: "flex-start", sm: "center" },
+          justifyContent: "space-between",
           mb: 3,
           flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
+          gap: { xs: 2, sm: 0 },
         }}
       >
         <Box>
@@ -168,9 +168,10 @@ const UserManagement: React.FC = () => {
             {t("users.title")}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {t("users.count", { count: users.length })}
+            {t("users.subtitle")}
           </Typography>
         </Box>
+
         <Button
           variant="contained"
           startIcon={<AddIcon />}

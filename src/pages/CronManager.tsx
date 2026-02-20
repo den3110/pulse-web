@@ -574,14 +574,42 @@ const CronManager: React.FC = () => {
             </Box>
 
             {loading && jobs.length === 0 ? (
-              <Box sx={{ p: 2 }}>
-                {[1, 2, 3].map((i) => (
-                  <Skeleton
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {[0, 1, 2].map((i) => (
+                  <Box
                     key={i}
-                    variant="rectangular"
-                    height={60}
-                    sx={{ mb: 1, borderRadius: 1 }}
-                  />
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      p: 2,
+                      borderRadius: 2,
+                      border: "1px solid rgba(255,255,255,0.06)",
+                      gap: 1.5,
+                    }}
+                  >
+                    <Skeleton variant="circular" width={8} height={8} />
+                    <Box sx={{ flex: 1 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 1,
+                          alignItems: "center",
+                          mb: 0.5,
+                        }}
+                      >
+                        <Skeleton variant="text" width={120} height={22} />
+                        <Skeleton variant="rounded" width={52} height={20} />
+                      </Box>
+                      <Box sx={{ display: "flex", gap: 2 }}>
+                        <Skeleton variant="text" width={200} height={16} />
+                      </Box>
+                    </Box>
+                    <Box sx={{ display: "flex", gap: 0.5 }}>
+                      <Skeleton variant="circular" width={28} height={28} />
+                      <Skeleton variant="circular" width={28} height={28} />
+                      <Skeleton variant="circular" width={28} height={28} />
+                    </Box>
+                  </Box>
                 ))}
               </Box>
             ) : jobs.length === 0 ? (

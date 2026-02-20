@@ -23,6 +23,7 @@ import {
   FormControl,
   InputLabel,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DnsIcon from "@mui/icons-material/Dns";
@@ -359,7 +360,7 @@ const ServerDetail: React.FC = () => {
             color="success"
             startIcon={
               testing ? (
-                <Skeleton variant="circular" width={14} height={14} />
+                <CircularProgress size={16} color="inherit" />
               ) : (
                 <PowerIcon />
               )
@@ -390,12 +391,16 @@ const ServerDetail: React.FC = () => {
       </Box>
 
       {/* Server Info + Stats row */}
-      <Box sx={{ display: "flex", gap: 2.5, mb: 3, flexWrap: "wrap" }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          gap: 2.5,
+          mb: 3,
+        }}
+      >
         {/* Server Info */}
-        <Card
-          className="server-info-card"
-          sx={{ flex: 1, minWidth: { xs: 0, sm: 300 } }}
-        >
+        <Card className="server-info-card" sx={{ flex: 1 }}>
           <CardContent
             className="server-info-content"
             sx={{ p: { xs: 2, md: 3 } }}
@@ -437,14 +442,18 @@ const ServerDetail: React.FC = () => {
                   sx={{
                     display: "flex",
                     justifyContent: "space-between",
+                    alignItems: "center",
                     py: 0.5,
                     borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    gap: 2,
                   }}
                 >
                   <Typography
                     className="server-info-label"
                     variant="body2"
                     color="text.secondary"
+                    noWrap
+                    sx={{ minWidth: 0, flexShrink: 0 }}
                   >
                     {item.label}
                   </Typography>
@@ -452,7 +461,12 @@ const ServerDetail: React.FC = () => {
                     className="server-info-value"
                     variant="body2"
                     fontWeight={500}
-                    sx={{ fontFamily: "'JetBrains Mono', monospace" }}
+                    noWrap
+                    sx={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      minWidth: 0,
+                      textAlign: "right",
+                    }}
                   >
                     {item.value}
                   </Typography>
@@ -463,10 +477,7 @@ const ServerDetail: React.FC = () => {
         </Card>
 
         {/* System Stats */}
-        <Card
-          className="system-stats-card"
-          sx={{ flex: 1, minWidth: { xs: 0, sm: 300 } }}
-        >
+        <Card className="system-stats-card" sx={{ flex: 1 }}>
           <CardContent
             className="stats-card-content"
             sx={{ p: { xs: 2, md: 3 } }}
@@ -495,7 +506,7 @@ const ServerDetail: React.FC = () => {
                   disabled={statsLoading}
                 >
                   {statsLoading ? (
-                    <Skeleton variant="circular" width={16} height={16} />
+                    <CircularProgress size={16} color="inherit" />
                   ) : (
                     <RefreshIcon fontSize="small" />
                   )}

@@ -40,6 +40,7 @@ import {
   ListItemIcon,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import Skeleton from "@mui/material/Skeleton";
 import DeleteIcon from "@mui/icons-material/Delete";
 import LanIcon from "@mui/icons-material/Lan";
 import SearchIcon from "@mui/icons-material/Search";
@@ -303,14 +304,17 @@ const PortManager: React.FC = () => {
           gap: { xs: 2, sm: 0 },
         }}
       >
-        <Typography
-          variant="h5"
-          fontWeight={700}
-          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-        >
-          <RouterIcon sx={{ color: "primary.main" }} />
-          {t("ports.title", "Network Ports")}
-        </Typography>
+        <Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <RouterIcon sx={{ color: "primary.main" }} />
+            <Typography variant="body1" fontWeight={500}>
+              {t("ports.title", "Network Ports")}
+            </Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+            {t("ports.subtitle", { server: selectedServer?.name })}
+          </Typography>
+        </Box>
 
         <Box
           sx={{
@@ -771,18 +775,33 @@ const PortManager: React.FC = () => {
             </TableHead>
             <TableBody>
               {loading && ports.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                    <CircularProgress />
-                    <Typography
-                      variant="body2"
-                      sx={{ mt: 1 }}
-                      color="text.secondary"
-                    >
-                      Scanning ports...
-                    </Typography>
-                  </TableCell>
-                </TableRow>
+                [0, 1, 2, 3, 4].map((i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <Skeleton variant="text" width={120} />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton variant="text" width={50} />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton variant="text" width={80} />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton variant="text" width={40} />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton variant="text" width={150} />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Skeleton
+                        variant="circular"
+                        width={28}
+                        height={28}
+                        sx={{ ml: "auto" }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : filteredPorts.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
@@ -991,9 +1010,6 @@ const PortManager: React.FC = () => {
             p: 2,
             borderBottom: "1px solid",
             borderColor: "divider",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
           }}
         >
           <Typography variant="h6" fontWeight={700}>
