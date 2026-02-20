@@ -111,6 +111,7 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
   const [reposHasMore, setReposHasMore] = useState(false);
   const [repoSearch, setRepoSearch] = useState("");
   const [selectedRepo, setSelectedRepo] = useState<any>(null);
+  const [githubConnected, setGithubConnected] = useState(true);
   const [analyzingRepo, setAnalyzingRepo] = useState(false);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFetchKey = useRef(""); // tracks "page-search" to avoid redundant fetches
@@ -169,8 +170,15 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
           : data.hasMore || false;
         setRepos((prev) => (append ? [...prev, ...newRepos] : newRepos));
         setReposHasMore(hasMore);
-      } catch (error) {
+        setGithubConnected(true);
+      } catch (error: any) {
         console.error("Failed to fetch repos", error);
+        if (
+          error.response?.status === 400 &&
+          error.response?.data?.message === "GitHub not connected"
+        ) {
+          setGithubConnected(false);
+        }
       } finally {
         setReposLoading(false);
       }
@@ -820,8 +828,42 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
         sx={{ mb: 1.5 }}
       />
 
-      {/* State 1: Initial load — show skeleton list */}
-      {reposLoading && repos.length === 0 ? (
+      {/* State 1: GitHub not connected */}
+      {!githubConnected ? (
+        <Box sx={{ textAlign: "center", py: 6, px: 2 }}>
+          <GitHubIcon
+            sx={{ fontSize: 48, color: "text.secondary", mb: 2, opacity: 0.5 }}
+          />
+          <Typography variant="h6" gutterBottom>
+            GitHub Not Connected
+          </Typography>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ mb: 3, maxWidth: 300, mx: "auto" }}
+          >
+            Connect your GitHub account to easily import repositories and
+            configure auto-deploy with webhooks.
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<GitHubIcon />}
+            onClick={() => {
+              // Same connection logic from Settings
+              const clientId =
+                import.meta.env.VITE_GITHUB_CLIENT_ID || "Ov23li0ksThNd1mnZDtt";
+              const currentUrl = window.location.href;
+              localStorage.setItem("github_redirect", currentUrl);
+              const scope = "repo user admin:repo_hook";
+              window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=${scope}`;
+            }}
+          >
+            Connect GitHub
+          </Button>
+        </Box>
+      ) : reposLoading && repos.length === 0 ? (
+        // State 2: Initial load — show skeleton list
         <List disablePadding>
           {Array.from({ length: 6 }).map((_, i) => (
             <ListItem
@@ -844,13 +886,13 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
           ))}
         </List>
       ) : repos.length === 0 ? (
-        /* State 2: Loaded, but empty */
+        /* State 3: Loaded, but empty */
         <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
           {repoSearch
             ? t("projects.noMatchingRepos", "No matching repositories found.")
             : t(
                 "projects.noReposFound",
-                "No repositories found. Ensure you have connected GitHub in Settings.",
+                "No repositories found for this account.",
               )}
         </Typography>
       ) : (
