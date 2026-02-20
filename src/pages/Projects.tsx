@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -17,33 +17,15 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   IconButton,
-  Switch,
-  FormControlLabel,
-  Tooltip,
 } from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
-import TerminalIcon from "@mui/icons-material/Terminal";
 import FolderIcon from "@mui/icons-material/Folder";
-import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import ContentPasteIcon from "@mui/icons-material/ContentPaste";
-import Drawer from "@mui/material/Drawer";
-import StopIcon from "@mui/icons-material/Stop";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import SearchIcon from "@mui/icons-material/Search";
 import Skeleton from "@mui/material/Skeleton";
-import CircularProgress from "@mui/material/CircularProgress";
 import InputAdornment from "@mui/material/InputAdornment";
-import FolderBrowserDialog from "../components/FolderBrowserDialog";
-import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import {
   DndContext,
   closestCenter,
@@ -63,43 +45,18 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import SEO from "../components/SEO";
-
-interface Server {
-  _id: string;
-  name: string;
-  host: string;
-  status: string;
-}
-
-interface Project {
-  _id: string;
-  name: string;
-  repoUrl: string;
-  branch: string;
-  server: Server;
-  deployPath: string;
-  repoFolder?: string;
-  outputPath?: string;
-  buildOutputDir?: string;
-  buildCommand: string;
-  installCommand: string;
-  startCommand: string;
-  stopCommand: string;
-  preDeployCommand?: string;
-  postDeployCommand?: string;
-  status: string;
-  autoDeploy: boolean;
-  processManager: "nohup" | "pm2";
-  lastDeployedAt?: string;
-  envVars?: Record<string, string>;
-}
+import ProjectCard, {
+  type Project,
+  type Server,
+} from "../components/ProjectCard";
+import ProjectFormDrawer from "../components/ProjectFormDrawer";
 
 interface SortableProjectGridItemProps {
   id: string;
   children: React.ReactNode;
 }
 
-function SortableProjectGridItem({
+const SortableProjectGridItem = memo(function SortableProjectGridItem({
   id,
   children,
 }: SortableProjectGridItemProps) {
@@ -116,7 +73,7 @@ function SortableProjectGridItem({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 999 : "auto",
+    zIndex: isDragging ? 999 : ("auto" as any),
   };
 
   return (
@@ -131,17 +88,7 @@ function SortableProjectGridItem({
       {children}
     </Grid>
   );
-}
-
-const statusColor: Record<string, "success" | "error" | "warning" | "default"> =
-  {
-    running: "success",
-    stopped: "error",
-    failed: "error",
-    deploying: "warning",
-    building: "warning",
-    idle: "default",
-  };
+});
 
 const Projects: React.FC = () => {
   const navigate = useNavigate();
@@ -153,16 +100,14 @@ const Projects: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
-  const [detectingBranch, setDetectingBranch] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
   const [deletePassword, setDeletePassword] = useState("");
   const [confirmStop, setConfirmStop] = useState<Project | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [visibleSecrets, setVisibleSecrets] = useState<Record<string, string>>(
     {},
   );
 
-  // F4: Search & filter
+  // Search & filter
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -178,24 +123,6 @@ const Projects: React.FC = () => {
       }),
     [projects, searchQuery, statusFilter],
   );
-  const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([]);
-  const [form, setForm] = useState({
-    name: "",
-    repoUrl: "",
-    branch: "main",
-    repoFolder: "",
-    server: "",
-    deployPath: "",
-    outputPath: "",
-    buildOutputDir: "",
-    buildCommand: "npm run build",
-    installCommand: "npm install",
-    startCommand: "npm start",
-    stopCommand: "",
-    autoDeploy: false,
-    processManager: "nohup" as "nohup" | "pm2",
-  });
-  const [folderBrowserOpen, setFolderBrowserOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -235,16 +162,12 @@ const Projects: React.FC = () => {
         const oldIndex = items.findIndex((item) => item._id === active.id);
         const newIndex = items.findIndex((item) => item._id === over?.id);
         const newItems = arrayMove(items, oldIndex, newIndex);
-
-        // Optimistic update
-        // We need to persist order.
         const ids = newItems.map((p) => p._id);
         api.reorderProjects(ids).catch((err) => {
           console.error("Failed to reorder projects", err);
           toast.error(t("common.reorderFailed") || "Reorder failed");
-          fetchData(); // Revert
+          fetchData();
         });
-
         return newItems;
       });
     }
@@ -256,12 +179,9 @@ const Projects: React.FC = () => {
 
     const setupSocket = async () => {
       try {
-        // Import socket service dynamically or use the one from props/context if available
-        // But here we use the exported connectSocket
         const { connectSocket } = await import("../services/socket");
         socket = await connectSocket();
 
-        // Join project rooms
         projects.forEach((p) => {
           socket.emit("join:project", p._id);
         });
@@ -281,7 +201,6 @@ const Projects: React.FC = () => {
               ),
             );
 
-            // If running/failed/success, refresh to get consistent state
             if (
               ["running", "stopped", "failed", "success"].includes(data.status)
             ) {
@@ -303,89 +222,17 @@ const Projects: React.FC = () => {
         socket.off("deployment:status");
       }
     };
-  }, [projects.length]); // Re-run when projects are loaded
-
-  const resetForm = useCallback(() => {
-    setForm({
-      name: "",
-      repoUrl: "",
-      branch: "main",
-      repoFolder: "",
-      server: "",
-      deployPath: "",
-      outputPath: "",
-      buildOutputDir: "",
-      buildCommand: "npm run build",
-      installCommand: "npm install",
-      startCommand: "npm start",
-      stopCommand: "",
-      autoDeploy: false,
-      processManager: "nohup",
-    });
-    setEditing(null);
-    setEnvVars([]);
-  }, []);
+  }, [projects.length]);
 
   const openCreate = useCallback(() => {
-    resetForm();
+    setEditing(null);
     setShowModal(true);
-  }, [resetForm]);
-  const openEdit = (p: Project) => {
-    setForm({
-      name: p.name,
-      repoUrl: p.repoUrl,
-      branch: p.branch,
-      repoFolder: p.repoFolder || "",
-      server: p.server._id,
-      deployPath: p.deployPath,
-      outputPath: p.outputPath || "",
-      buildOutputDir: p.buildOutputDir || "",
-      buildCommand: p.buildCommand,
-      installCommand: p.installCommand,
-      startCommand: p.startCommand,
-      stopCommand: p.stopCommand,
-      autoDeploy: p.autoDeploy,
-      processManager: p.processManager || "nohup",
-    });
-    // Convert envVars object to string
-    const vars = p.envVars
-      ? Object.entries(p.envVars).map(([key, value]) => ({ key, value }))
-      : [];
-    setEnvVars(vars);
+  }, []);
+
+  const openEdit = useCallback((p: Project) => {
     setEditing(p);
     setShowModal(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    // Convert envVars array to object
-    const envVarsObj: Record<string, string> = {};
-    envVars.forEach(({ key, value }) => {
-      if (key.trim()) {
-        envVarsObj[key.trim()] = value;
-      }
-    });
-
-    const payload = { ...form, envVars: envVarsObj };
-
-    try {
-      if (editing) {
-        await api.put(`/projects/${editing._id}`, payload);
-        toast.success("Updated!");
-      } else {
-        await api.post("/projects", payload);
-        toast.success("Created!");
-      }
-      setShowModal(false);
-      resetForm();
-      fetchData();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  }, []);
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
@@ -415,50 +262,28 @@ const Projects: React.FC = () => {
     [navigate],
   );
 
-  const handleToggleSecret = async (projectId: string) => {
-    if (visibleSecrets[projectId]) {
-      const newSecrets = { ...visibleSecrets };
-      delete newSecrets[projectId];
-      setVisibleSecrets(newSecrets);
-      return;
-    }
-
-    try {
-      const { data } = await api.get(`/projects/${projectId}/webhook-url`);
-      setVisibleSecrets((prev) => ({
-        ...prev,
-        [projectId]: data.webhookSecret,
-      }));
-    } catch (error: any) {
-      toast.error("Failed to get webhook secret");
-    }
-  };
-
-  const detectBranch = async () => {
-    if (!form.repoUrl || !form.server) {
-      toast.error("Please enter Repo URL and select a Server first");
-      return;
-    }
-    setDetectingBranch(true);
-    try {
-      const { data } = await api.post("/projects/detect-branch", {
-        repoUrl: form.repoUrl,
-        serverId: form.server,
-      });
-      setForm((prev) => ({ ...prev, branch: data.branch }));
-      toast.success(`Detected branch: ${data.branch}`);
-      if (data.allBranches && data.allBranches.length > 1) {
-        toast(`Available branches: ${data.allBranches.join(", ")}`, {
-          icon: "📋",
-          duration: 5000,
+  const handleToggleSecret = useCallback(
+    async (projectId: string) => {
+      if (visibleSecrets[projectId]) {
+        setVisibleSecrets((prev) => {
+          const next = { ...prev };
+          delete next[projectId];
+          return next;
         });
+        return;
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to detect branch");
-    } finally {
-      setDetectingBranch(false);
-    }
-  };
+      try {
+        const { data } = await api.get(`/projects/${projectId}/webhook-url`);
+        setVisibleSecrets((prev) => ({
+          ...prev,
+          [projectId]: data.webhookSecret,
+        }));
+      } catch {
+        toast.error("Failed to get webhook secret");
+      }
+    },
+    [visibleSecrets],
+  );
 
   if (loading)
     return (
@@ -512,6 +337,8 @@ const Projects: React.FC = () => {
         title={t("seo.projects.title")}
         description={t("seo.projects.description")}
       />
+
+      {/* Header */}
       <Box
         className="projects-header"
         sx={{
@@ -549,7 +376,7 @@ const Projects: React.FC = () => {
         </Button>
       </Box>
 
-      {/* F4: Search & Filter Bar */}
+      {/* Search & Filter Bar */}
       <Box
         className="projects-filter-bar"
         sx={{
@@ -562,6 +389,7 @@ const Projects: React.FC = () => {
       >
         <TextField
           className="projects-search-input"
+          autoComplete="off"
           size="small"
           placeholder={t("projects.searchPlaceholder")}
           value={searchQuery}
@@ -588,6 +416,7 @@ const Projects: React.FC = () => {
         ))}
       </Box>
 
+      {/* Project Grid */}
       {filteredProjects.length === 0 ? (
         <Card className="no-projects-card">
           <CardContent sx={{ textAlign: "center", py: 8 }}>
@@ -633,372 +462,15 @@ const Projects: React.FC = () => {
             >
               {filteredProjects.map((project) => (
                 <SortableProjectGridItem key={project._id} id={project._id}>
-                  <Card
-                    className={`project-card project-status-${project.status}`}
-                    sx={{
-                      height: "100%",
-                      overflow: "hidden",
-                      maxWidth: "100%",
-                      transition: "all 0.25s ease",
-                      "&:hover": {
-                        transform: "translateY(-4px)",
-                        boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-                      },
-                    }}
-                  >
-                    <CardContent
-                      sx={{ p: { xs: 2, md: 3 }, overflow: "hidden" }}
-                      className="project-card-content"
-                    >
-                      <Box
-                        className="project-card-header"
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          mb: 1,
-                        }}
-                      >
-                        <Box
-                          className="project-identity"
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                            minWidth: 0,
-                            flex: 1,
-                          }}
-                        >
-                          <FolderIcon
-                            sx={{ color: "primary.main", flexShrink: 0 }}
-                            className="project-icon"
-                          />
-                          <Typography
-                            variant="subtitle1"
-                            fontWeight={600}
-                            className="project-name"
-                            sx={{
-                              cursor: "pointer",
-                              "&:hover": {
-                                color: "primary.light",
-                                textDecoration: "underline",
-                              },
-                              transition: "color 0.2s",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                              fontSize: { xs: 14, md: 16 },
-                            }}
-                            onClick={() =>
-                              navigate(`/projects/${project._id}/deploy`)
-                            }
-                          >
-                            {project.name}
-                          </Typography>
-                        </Box>
-                        <Chip
-                          label={project.status}
-                          size="small"
-                          color={statusColor[project.status] || "default"}
-                          variant="outlined"
-                          className={`project-status-chip status-${project.status}`}
-                        />
-                      </Box>
-
-                      <Typography
-                        variant="body2"
-                        className="project-repo-url"
-                        sx={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          color: "text.secondary",
-                          fontSize: { xs: 10, md: 12 },
-                          mb: 0.5,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {project.repoUrl}
-                      </Typography>
-
-                      <Box
-                        className="project-tags"
-                        sx={{
-                          display: "flex",
-                          gap: 1,
-                          mb: 1.5,
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <Chip
-                          label={project.branch}
-                          size="small"
-                          variant="outlined"
-                          className="project-branch-chip"
-                          sx={{ fontSize: 11 }}
-                        />
-                        <Chip
-                          label={project.server?.name || "No server"}
-                          size="small"
-                          variant="outlined"
-                          className={`project-server-chip server-${project.server?.status}`}
-                          color={
-                            project.server?.status === "online"
-                              ? "success"
-                              : "default"
-                          }
-                          sx={{ fontSize: 11 }}
-                        />
-                        {project.autoDeploy && (
-                          <Tooltip title="Auto-deploy enabled — checks for new commits every 60s">
-                            <Chip
-                              icon={
-                                <AutoFixHighIcon
-                                  sx={{ fontSize: "14px !important" }}
-                                />
-                              }
-                              label="Auto-deploy"
-                              size="small"
-                              color="info"
-                              variant="outlined"
-                              className="project-autodeploy-chip"
-                              sx={{ fontSize: 11 }}
-                            />
-                          </Tooltip>
-                        )}
-                      </Box>
-
-                      <Typography
-                        variant="body2"
-                        className="project-deploy-path"
-                        sx={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          color: "text.secondary",
-                          fontSize: 11,
-                          mb: 2,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        📁 {project.deployPath}
-                      </Typography>
-
-                      {project.lastDeployedAt && (
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          display="block"
-                          className="project-last-deployed"
-                          sx={{ mb: 1 }}
-                        >
-                          {t("deploy.lastDeployed")}:{" "}
-                          {new Date(project.lastDeployedAt).toLocaleString(
-                            "vi-VN",
-                          )}
-                        </Typography>
-                      )}
-
-                      {/* Webhook URL / Secret Display */}
-                      <Box
-                        className="project-webhook-box"
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 0.5,
-                          mb: 2,
-                          p: 1,
-                          bgcolor: (theme) =>
-                            theme.palette.mode === "dark"
-                              ? "rgba(0,0,0,0.3)"
-                              : "action.hover",
-                          borderRadius: 1,
-                          border: "1px solid",
-                          borderColor: "divider",
-                          overflow: "hidden",
-                          minWidth: 0,
-                        }}
-                      >
-                        <Box
-                          className="webhook-content"
-                          sx={{
-                            flex: 1,
-                            overflow: "hidden",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                          }}
-                        >
-                          <Box component="span" sx={{ fontSize: 14 }}>
-                            {visibleSecrets[project._id] ? "🔑" : "🔗"}
-                          </Box>
-                          <Typography
-                            variant="caption"
-                            className="webhook-text"
-                            sx={{
-                              fontFamily: "'JetBrains Mono', monospace",
-                              fontSize: 11,
-                              color: "text.primary",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {visibleSecrets[project._id]
-                              ? visibleSecrets[project._id]
-                              : `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${project._id}`}
-                          </Typography>
-                        </Box>
-
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            const text = visibleSecrets[project._id]
-                              ? visibleSecrets[project._id]
-                              : `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${project._id}`;
-                            navigator.clipboard.writeText(text);
-                            toast.success(
-                              visibleSecrets[project._id]
-                                ? "Secret Key copied!"
-                                : "Webhook URL copied!",
-                            );
-                          }}
-                          sx={{ p: 0.3, color: "text.secondary", ml: 0.5 }}
-                          title={
-                            visibleSecrets[project._id]
-                              ? "Copy Secret"
-                              : "Copy URL"
-                          }
-                        >
-                          <ContentCopyIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
-                        {/* <Box
-                      sx={{
-                        width: 1,
-                        height: 14,
-                        bgcolor: "rgba(255,255,255,0.1)",
-                        mx: 0.5,
-                      }}
-                    /> */}
-                        <IconButton
-                          size="small"
-                          onClick={() => handleToggleSecret(project._id)}
-                          sx={{
-                            p: 0.3,
-                            color: visibleSecrets[project._id]
-                              ? "primary.main"
-                              : "warning.main",
-                          }}
-                          title={
-                            visibleSecrets[project._id]
-                              ? "Show URL"
-                              : "Show Secret Key"
-                          }
-                        >
-                          <Box
-                            sx={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              border: "1px solid currentColor",
-                              borderRadius: 0.5,
-                              px: 0.5,
-                              height: 18,
-                              display: "flex",
-                              alignItems: "center",
-                            }}
-                          >
-                            {visibleSecrets[project._id] ? "URL" : "KEY"}
-                          </Box>
-                        </IconButton>
-                      </Box>
-
-                      <Box
-                        className="project-actions"
-                        sx={{
-                          display: "flex",
-                          gap: { xs: 0.5, md: 1 },
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        {[
-                          "running",
-                          "deploying",
-                          "building",
-                          "cloning",
-                          "installing",
-                          "starting",
-                        ].includes(project.status) ? (
-                          <>
-                            <Button
-                              size="small"
-                              variant="contained"
-                              color="info"
-                              startIcon={<TerminalIcon />}
-                              onClick={() =>
-                                navigate(`/projects/${project._id}/deploy`)
-                              }
-                              className="action-btn-console"
-                            >
-                              Console
-                            </Button>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              color="error"
-                              startIcon={<StopIcon />}
-                              onClick={() => setConfirmStop(project)}
-                              disabled={project.status !== "running"}
-                              className="action-btn-stop"
-                            >
-                              Stop
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button
-                              size="small"
-                              variant="contained"
-                              startIcon={<RocketLaunchIcon />}
-                              onClick={() => handleDeploy(project._id)}
-                              className="action-btn-deploy"
-                            >
-                              {t("common.deploy")}
-                            </Button>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              startIcon={<TerminalIcon />}
-                              onClick={() =>
-                                navigate(`/projects/${project._id}/deploy`)
-                              }
-                              className="action-btn-logs"
-                            >
-                              Logs
-                            </Button>
-                          </>
-                        )}
-                        <Box sx={{ flex: 1 }} />
-                        <IconButton
-                          size="small"
-                          onClick={() => openEdit(project)}
-                          className="action-btn-edit"
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          color="error"
-                          startIcon={<DeleteForeverIcon />}
-                          onClick={() => setConfirmDelete(project)}
-                          sx={{ minWidth: "auto" }}
-                          className="action-btn-delete"
-                        >
-                          {t("common.delete")}
-                        </Button>
-                      </Box>
-                    </CardContent>
-                  </Card>
+                  <ProjectCard
+                    project={project}
+                    visibleSecret={visibleSecrets[project._id]}
+                    onEdit={openEdit}
+                    onDelete={setConfirmDelete}
+                    onStop={setConfirmStop}
+                    onDeploy={handleDeploy}
+                    onToggleSecret={handleToggleSecret}
+                  />
                 </SortableProjectGridItem>
               ))}
             </Grid>
@@ -1006,480 +478,14 @@ const Projects: React.FC = () => {
         </DndContext>
       )}
 
-      {/* Create/Edit Dialog */}
-      <Drawer
+      {/* Add/Edit Project Drawer — form state is fully local inside this component */}
+      <ProjectFormDrawer
         open={showModal}
+        editing={editing}
+        servers={servers}
         onClose={() => setShowModal(false)}
-        anchor="right"
-      >
-        <Box
-          component="form"
-          onSubmit={handleSubmit}
-          sx={{ width: { xs: "100%", sm: 500, md: 600 }, p: 0 }}
-          role="presentation"
-        >
-          <Box
-            sx={{
-              p: 3,
-              pt: 4,
-              borderBottom: 1,
-              borderColor: "divider",
-              position: "sticky",
-              top: 0,
-              bgcolor: "background.paper",
-              zIndex: 10,
-            }}
-          >
-            <Typography variant="h6">
-              {editing ? t("projects.editProject") : t("projects.addProject")}
-            </Typography>
-          </Box>
-
-          <Box sx={{ p: 3, height: "100%", overflowY: "auto" }}>
-            <TextField
-              label={t("common.name")}
-              placeholder="My App"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              sx={{ mb: 2 }}
-              className="input-project-name"
-            />
-
-            {/* Server Select */}
-            <FormControl
-              fullWidth
-              sx={{ mb: 2 }}
-              className="input-project-server"
-            >
-              <InputLabel>{t("common.server")}</InputLabel>
-              <Select
-                value={form.server}
-                label={t("common.server")}
-                onChange={(e) => setForm({ ...form, server: e.target.value })}
-                required
-                className="select-server"
-              >
-                {servers.map((server) => (
-                  <MenuItem key={server._id} value={server._id}>
-                    {server.name} ({server.host})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <TextField
-              label={t("common.name")}
-              placeholder="My Awesome App"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              fullWidth
-              sx={{ mb: 2 }}
-              className="input-project-name"
-            />
-
-            <TextField
-              label={t("projects.repoUrl")}
-              placeholder="https://github.com/username/repo.git"
-              value={form.repoUrl}
-              onChange={(e) => setForm({ ...form, repoUrl: e.target.value })}
-              required
-              fullWidth
-              sx={{ mb: 2 }}
-              className="input-repo-url"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <Tooltip title="Paste from Clipboard">
-                      <IconButton
-                        edge="end"
-                        onClick={async () => {
-                          try {
-                            const text = await navigator.clipboard.readText();
-                            if (text)
-                              setForm((prev) => ({
-                                ...prev,
-                                repoUrl: text.trim(),
-                              }));
-                          } catch {
-                            toast.error("Cannot access clipboard");
-                          }
-                        }}
-                        className="btn-paste-repo"
-                      >
-                        <ContentPasteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            {/* Branch with auto-detect */}
-            <Box
-              sx={{ display: "flex", gap: 1, mb: 2 }}
-              className="branch-container"
-            >
-              <TextField
-                label={t("projects.branch")}
-                placeholder="main"
-                value={form.branch}
-                onChange={(e) => setForm({ ...form, branch: e.target.value })}
-                sx={{ flex: 1 }}
-                className="input-branch"
-              />
-              <Tooltip title={t("projects.detectBranch")}>
-                <span>
-                  <Button
-                    variant="outlined"
-                    onClick={detectBranch}
-                    disabled={detectingBranch || !form.repoUrl || !form.server}
-                    startIcon={
-                      detectingBranch ? (
-                        <CircularProgress size={16} color="inherit" />
-                      ) : (
-                        <AutoFixHighIcon />
-                      )
-                    }
-                    sx={{ minWidth: 130, whiteSpace: "nowrap" }}
-                    className="btn-detect-branch"
-                  >
-                    {detectingBranch ? "Detecting..." : t("projects.detect")}
-                  </Button>
-                </span>
-              </Tooltip>
-            </Box>
-
-            <Box sx={{ mb: 2, display: "flex", gap: 1 }}>
-              <TextField
-                label={t("projects.repoFolder")}
-                placeholder="docs (optional)"
-                value={form.repoFolder || ""}
-                onChange={(e) =>
-                  setForm({ ...form, repoFolder: e.target.value })
-                }
-                fullWidth
-                helperText={t("projects.repoFolderHint")}
-                className="input-repo-folder"
-              />
-              <Tooltip title={t("projects.browse")}>
-                <span>
-                  <Button
-                    variant="outlined"
-                    sx={{ minWidth: 40, height: 40, mt: 1 }}
-                    onClick={() => setFolderBrowserOpen(true)}
-                    disabled={
-                      !form.repoUrl ||
-                      !form.branch ||
-                      !form.server ||
-                      detectingBranch
-                    }
-                  >
-                    <FolderOpenIcon />
-                  </Button>
-                </span>
-              </Tooltip>
-            </Box>
-
-            <FolderBrowserDialog
-              open={folderBrowserOpen}
-              onClose={() => setFolderBrowserOpen(false)}
-              onSelect={(path) =>
-                setForm((prev) => ({ ...prev, repoFolder: path }))
-              }
-              serverId={form.server}
-              repoUrl={form.repoUrl}
-              branch={form.branch}
-              deployPath={form.deployPath}
-            />
-
-            {/* Deploy Path */}
-            <TextField
-              label={t("projects.deployPathLabel")}
-              placeholder="/var/www/my-app"
-              value={form.deployPath}
-              onChange={(e) => setForm({ ...form, deployPath: e.target.value })}
-              required
-              fullWidth
-              sx={{ mb: 2 }}
-              helperText={t("projects.deployPathHint")}
-              className="input-deploy-path"
-            />
-
-            <TextField
-              label={t("projects.outputPath")}
-              placeholder="/var/www/my-app-dist"
-              value={form.outputPath}
-              onChange={(e) => setForm({ ...form, outputPath: e.target.value })}
-              sx={{ mb: 2 }}
-              helperText={t("projects.outputPathHint")}
-              className="input-output-path"
-              fullWidth
-            />
-
-            <TextField
-              label={t("projects.buildOutput")}
-              placeholder="build or dist"
-              value={form.buildOutputDir}
-              onChange={(e) =>
-                setForm({ ...form, buildOutputDir: e.target.value })
-              }
-              sx={{ mb: 2 }}
-              helperText={t("projects.buildOutputHint")}
-              className="input-build-output-dir"
-              fullWidth
-            />
-
-            {/* Commands */}
-            <Typography
-              variant="caption"
-              fontWeight={600}
-              color="text.secondary"
-              sx={{ mb: 1, display: "block" }}
-              className="commands-section-title"
-            >
-              {t("projects.commandsSection")}
-            </Typography>
-            <Box
-              className="commands-grid"
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-                gap: 2,
-                mb: 2,
-              }}
-            >
-              <TextField
-                label={t("settings.installCommand")}
-                placeholder="npm install"
-                value={form.installCommand}
-                onChange={(e) =>
-                  setForm({ ...form, installCommand: e.target.value })
-                }
-                size="small"
-                className="input-install-cmd"
-              />
-              <TextField
-                label={t("settings.buildCommand")}
-                placeholder="npm run build"
-                value={form.buildCommand}
-                onChange={(e) =>
-                  setForm({ ...form, buildCommand: e.target.value })
-                }
-                size="small"
-                className="input-build-cmd"
-              />
-              <TextField
-                label={t("settings.startCommand")}
-                placeholder="npm start"
-                value={form.startCommand}
-                onChange={(e) =>
-                  setForm({ ...form, startCommand: e.target.value })
-                }
-                size="small"
-                className="input-start-cmd"
-              />
-              <TextField
-                label={t("settings.stopCommand")}
-                placeholder="pm2 stop app"
-                value={form.stopCommand}
-                onChange={(e) =>
-                  setForm({ ...form, stopCommand: e.target.value })
-                }
-                size="small"
-                className="input-stop-cmd"
-              />
-            </Box>
-
-            {/* Process Manager */}
-            <FormControl
-              fullWidth
-              sx={{ mb: 2 }}
-              className="input-process-manager"
-            >
-              <InputLabel>Process Manager</InputLabel>
-              <Select
-                value={form.processManager}
-                label="Process Manager"
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    processManager: e.target.value as "nohup" | "pm2",
-                  })
-                }
-                className="select-process-manager"
-              >
-                <MenuItem value="nohup">
-                  <Box>
-                    <Typography variant="body1">Nohup (Default)</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Simple background process
-                    </Typography>
-                  </Box>
-                </MenuItem>
-                <MenuItem value="pm2">
-                  <Box>
-                    <Typography variant="body1">PM2</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Advanced process manager (auto-restart, monitoring)
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              </Select>
-            </FormControl>
-
-            {/* Environment Variables */}
-            <Box sx={{ mb: 2 }} className="env-vars-section">
-              <Typography
-                variant="caption"
-                fontWeight={600}
-                color="text.secondary"
-                sx={{ mb: 1, display: "block" }}
-                className="env-vars-title"
-              >
-                {t("projects.envVarsSection")}
-              </Typography>
-              <Box
-                sx={{ display: "flex", flexDirection: "column", gap: 1 }}
-                className="env-vars-list"
-              >
-                {envVars.map((env, index) => (
-                  <Box
-                    key={index}
-                    sx={{ display: "flex", gap: 1 }}
-                    className={`env-var-row row-${index}`}
-                  >
-                    <TextField
-                      label="Key"
-                      value={env.key}
-                      onChange={(e) => {
-                        const newVars = [...envVars];
-                        newVars[index].key = e.target.value;
-                        setEnvVars(newVars);
-                      }}
-                      size="small"
-                      sx={{ flex: 1 }}
-                      placeholder="API_KEY"
-                      className="input-env-key"
-                    />
-                    <TextField
-                      label="Value"
-                      value={env.value}
-                      onChange={(e) => {
-                        const newVars = [...envVars];
-                        newVars[index].value = e.target.value;
-                        setEnvVars(newVars);
-                      }}
-                      size="small"
-                      sx={{ flex: 1 }}
-                      placeholder="secret-123"
-                      className="input-env-value"
-                    />
-                    <IconButton
-                      color="error"
-                      onClick={() => {
-                        const newVars = envVars.filter((_, i) => i !== index);
-                        setEnvVars(newVars);
-                      }}
-                      className="btn-delete-env"
-                    >
-                      <DeleteForeverIcon />
-                    </IconButton>
-                  </Box>
-                ))}
-                <Button
-                  startIcon={<AddIcon />}
-                  onClick={() =>
-                    setEnvVars([...envVars, { key: "", value: "" }])
-                  }
-                  variant="outlined"
-                  size="small"
-                  sx={{ alignSelf: "flex-start" }}
-                  className="btn-add-env"
-                >
-                  {t("common.add")}
-                </Button>
-              </Box>
-            </Box>
-
-            {/* Auto Deploy */}
-            <Box
-              className={`auto-deploy-box ${form.autoDeploy ? "enabled" : "disabled"}`}
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                bgcolor: form.autoDeploy
-                  ? "rgba(33,150,243,0.08)"
-                  : "rgba(255,255,255,0.03)",
-                border: "1px solid",
-                borderColor: form.autoDeploy
-                  ? "info.main"
-                  : "rgba(255,255,255,0.08)",
-                transition: "all 0.2s ease",
-              }}
-            >
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={form.autoDeploy}
-                    onChange={(e) =>
-                      setForm({ ...form, autoDeploy: e.target.checked })
-                    }
-                    color="info"
-                    className="switch-auto-deploy"
-                  />
-                }
-                label={
-                  <Typography
-                    variant="body2"
-                    fontWeight={600}
-                    className="auto-deploy-label"
-                  >
-                    🔄 {t("projects.autoDeployLabel")}
-                  </Typography>
-                }
-              />
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: "block", ml: 6, mt: -0.5 }}
-                className="auto-deploy-status-text"
-              >
-                {t(
-                  form.autoDeploy
-                    ? "projects.autoDeployEnabled"
-                    : "projects.autoDeployDisabled",
-                )}
-              </Typography>
-            </Box>
-          </Box>
-
-          <Box
-            sx={{
-              p: 2,
-              px: 3,
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: 2,
-              borderTop: 1,
-              borderColor: "divider",
-              position: "sticky",
-              bottom: 0,
-              bgcolor: "background.paper",
-              zIndex: 10,
-            }}
-            className="project-dialog-actions"
-          >
-            <Button onClick={() => setShowModal(false)} className="btn-cancel">
-              {t("common.cancel")}
-            </Button>
-            <Button type="submit" variant="contained" className="btn-submit">
-              {editing ? t("common.update") : t("projects.addProject")}
-            </Button>
-          </Box>
-        </Box>
-      </Drawer>
+        onSaved={fetchData}
+      />
 
       {/* Confirm Delete Dialog */}
       <Dialog
@@ -1503,6 +509,7 @@ const Projects: React.FC = () => {
           <TextField
             label="Enter password to confirm"
             type="password"
+            autoComplete="new-password"
             value={deletePassword}
             onChange={(e) => setDeletePassword(e.target.value)}
             fullWidth

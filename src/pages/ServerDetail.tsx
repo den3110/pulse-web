@@ -521,8 +521,8 @@ const ServerDetail: React.FC = () => {
                 color="text.secondary"
               >
                 {statsLoading
-                  ? "Loading..."
-                  : "No stats available. Server may be offline."}
+                  ? t("serverDetail.loading")
+                  : t("serverDetail.noStats")}
               </Typography>
             ) : (
               <Box
@@ -731,7 +731,7 @@ const ServerDetail: React.FC = () => {
                 }}
                 onClick={() => setTermOutput([])}
               >
-                clear
+                {t("serverDetail.clear")}
               </Button>
             </Box>
 
@@ -766,13 +766,14 @@ const ServerDetail: React.FC = () => {
               {termOutput.length === 0 && !termLoading && (
                 <>
                   <Box className="terminal-welcome-msg" sx={{ color: "#5f5" }}>
-                    Welcome to {server.name} ({server.host})
+                    {t("serverDetail.welcome", { name: server.name })} (
+                    {server.host})
                   </Box>
                   <Box
                     className="terminal-welcome-sub"
                     sx={{ color: "#888", mb: 1 }}
                   >
-                    Type commands to execute on the remote server.
+                    {t("serverDetail.typeCommands")}
                   </Box>
                 </>
               )}
@@ -823,7 +824,7 @@ const ServerDetail: React.FC = () => {
                     }}
                   >
                     <Skeleton variant="circular" width={10} height={10} />
-                    <span>running...</span>
+                    <span>{t("serverDetail.running")}</span>
                   </Box>
                 </Box>
               )}
@@ -906,7 +907,7 @@ const ServerDetail: React.FC = () => {
                 className="projects-icon"
                 sx={{ fontSize: 18, mr: 1, verticalAlign: "text-bottom" }}
               />
-              Projects on this Server ({projects.length})
+              {t("serverDetail.projectsOnServer")} ({projects.length})
             </Typography>
             <Box
               className="projects-list"
@@ -1062,7 +1063,7 @@ const ServerDetail: React.FC = () => {
                     setEditForm({ ...editForm, password: e.target.value })
                   }
                   fullWidth
-                  helperText="Leave blank to keep current"
+                  helperText={t("serverDetail.passwordPlaceholder")}
                 />
               ) : (
                 <TextField
@@ -1075,7 +1076,7 @@ const ServerDetail: React.FC = () => {
                   fullWidth
                   multiline
                   rows={4}
-                  helperText="Leave blank to keep current"
+                  helperText={t("serverDetail.privateKeyPlaceholder")}
                 />
               )}
             </Box>

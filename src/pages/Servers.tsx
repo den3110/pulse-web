@@ -240,16 +240,16 @@ const Servers: React.FC = () => {
     try {
       if (editing) {
         await api.put(`/servers/${editing._id}`, form);
-        toast.success("Server updated!");
+        toast.success(t("servers.updated"));
       } else {
         await api.post("/servers", form);
-        toast.success("Server added!");
+        toast.success(t("servers.added"));
       }
       setShowModal(false);
       resetForm();
       refreshServers();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed");
+      toast.error(error.response?.data?.message || t("common.failed"));
     }
   };
 
@@ -257,11 +257,11 @@ const Servers: React.FC = () => {
     if (!confirmDelete) return;
     try {
       await api.delete(`/servers/${confirmDelete._id}`);
-      toast.success("Deleted!");
+      toast.success(t("servers.deleted"));
       setConfirmDelete(null);
       refreshServers();
     } catch (error: any) {
-      toast.error("Failed to delete server");
+      toast.error(t("servers.deleteFailed"));
     }
   };
 
@@ -271,11 +271,11 @@ const Servers: React.FC = () => {
       try {
         const { data } = await api.post(`/servers/${id}/test`);
         data.success
-          ? toast.success("Connected! 🎉")
-          : toast.error(`Failed: ${data.message}`);
+          ? toast.success(t("servers.testSuccess"))
+          : toast.error(`${t("servers.testFailed")} ${data.message}`);
         refreshServers();
       } catch (error: any) {
-        toast.error(error.response?.data?.message || "Test failed");
+        toast.error(error.response?.data?.message || t("servers.testFailed"));
       } finally {
         setTesting(null);
       }
@@ -295,7 +295,9 @@ const Servers: React.FC = () => {
       setStatsMap((prev) => ({ ...prev, [id]: data.stats || data }));
     } catch (error: any) {
       toast.error(
-        `Failed to get stats: ${error.response?.data?.message || error.message}`,
+        `${t("servers.statsFailed")} ${
+          error.response?.data?.message || error.message
+        }`,
       );
       setExpandedStats((prev) => ({ ...prev, [id]: false }));
     } finally {
@@ -820,7 +822,7 @@ const Servers: React.FC = () => {
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <Tooltip title={t("common.paste") || "Paste"}>
+                    <Tooltip title={t("servers.paste") || "Paste"}>
                       <IconButton
                         edge="end"
                         onClick={async () => {
@@ -828,7 +830,7 @@ const Servers: React.FC = () => {
                             const text = await navigator.clipboard.readText();
                             if (text) setForm({ ...form, host: text });
                           } catch (error) {
-                            toast.error("Failed to read clipboard");
+                            toast.error(t("servers.clipboardError"));
                           }
                         }}
                       >
@@ -924,21 +926,22 @@ const Servers: React.FC = () => {
 
       {/* Confirm Delete Dialog */}
       <Dialog open={!!confirmDelete} onClose={() => setConfirmDelete(null)}>
-        <DialogTitle>Delete Server</DialogTitle>
+        <DialogTitle>{t("servers.deleteServer")}</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete{" "}
-            <strong>{confirmDelete?.name}</strong> ({confirmDelete?.host})?
+            {t("servers.confirmDelete", { name: confirmDelete?.name })} (
+            {confirmDelete?.host})?
           </Typography>
           <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-            This action cannot be undone. All associated projects may stop
-            working.
+            {t("servers.deleteWarning")}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmDelete(null)}>Cancel</Button>
+          <Button onClick={() => setConfirmDelete(null)}>
+            {t("common.cancel")}
+          </Button>
           <Button onClick={handleDelete} variant="contained" color="error">
-            Delete
+            {t("common.delete")}
           </Button>
         </DialogActions>
       </Dialog>

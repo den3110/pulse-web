@@ -71,6 +71,9 @@ interface DeploymentRecord {
   _id: string;
   status: string;
   commitHash?: string;
+  commitMessage?: string;
+  commitAuthor?: string;
+  commitUrl?: string;
   branch: string;
   triggeredBy: string;
   triggeredByUser?: { username: string };
@@ -297,6 +300,12 @@ const DeploymentDetail: React.FC = () => {
   const [rollbackTarget, setRollbackTarget] = useState<DeploymentRecord | null>(
     null,
   );
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [webhookRegistered, setWebhookRegistered] = useState(false);
+  const [webhookGuideOpen, setWebhookGuideOpen] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
+  const [savingWebhookReg, setSavingWebhookReg] = useState(false);
 
   // Fetch project + history, and load logs from the latest deployment
   useEffect(() => {
@@ -308,6 +317,7 @@ const DeploymentDetail: React.FC = () => {
         ]);
         setProject(projectRes.data);
         setDeployStatus(projectRes.data.status);
+        setWebhookRegistered(!!projectRes.data.webhookRegistered);
         const deployments: DeploymentRecord[] =
           historyRes.data.deployments || [];
         setHistory(deployments);
@@ -592,10 +602,42 @@ const DeploymentDetail: React.FC = () => {
   }, []);
 
   const copyWebhookUrl = useCallback(() => {
-    const url = `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${projectId}`;
+    const url =
+      webhookUrl ||
+      `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${projectId}`;
     navigator.clipboard.writeText(url);
     toast.success("Webhook URL copied!");
+  }, [projectId, webhookUrl]);
+
+  const fetchWebhookInfo = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const { data } = await api.get(`/projects/${projectId}/webhook-url`);
+      setWebhookUrl(data.webhookUrl || "");
+      setWebhookSecret(data.webhookSecret || "");
+    } catch {
+      // ignore — user may not own the project
+    }
   }, [projectId]);
+
+  const handleToggleWebhookRegistered = async (val: boolean) => {
+    setSavingWebhookReg(true);
+    try {
+      await api.put(`/projects/${projectId}/webhook-registered`, {
+        registered: val,
+      });
+      setWebhookRegistered(val);
+      toast.success(
+        val
+          ? "Polling disabled — webhook mode active ⚡"
+          : "Polling re-enabled",
+      );
+    } catch {
+      toast.error("Failed to update webhook status");
+    } finally {
+      setSavingWebhookReg(false);
+    }
+  };
 
   const addEditEnvVar = () => {
     setEditForm((prev) => ({
@@ -882,22 +924,68 @@ const DeploymentDetail: React.FC = () => {
                 {project?.startCommand || "—"}
               </Typography>
             </Box>
-            <Box className="detail-item detail-webhook">
-              <Typography variant="caption" color="text.secondary">
-                Webhook
-              </Typography>
+            {/* Webhook — full setup guide */}
+            <Box
+              className="detail-item detail-webhook"
+              sx={{ gridColumn: "1 / -1" }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mb: 1,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  GitHub Webhook
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                  {webhookRegistered ? (
+                    <Chip
+                      label="⚡ Webhook Active"
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                      sx={{ fontSize: 10 }}
+                    />
+                  ) : (
+                    <Chip
+                      label="🕐 Polling (60s)"
+                      size="small"
+                      color="default"
+                      variant="outlined"
+                      sx={{ fontSize: 10 }}
+                    />
+                  )}
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      fetchWebhookInfo();
+                      setWebhookGuideOpen(true);
+                    }}
+                    sx={{ fontSize: 11 }}
+                  >
+                    Setup Guide
+                  </Button>
+                </Box>
+              </Box>
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                 <Typography
                   variant="body2"
                   sx={{
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: 11,
+                    opacity: 0.8,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
+                    flex: 1,
                   }}
                 >
-                  /api/webhook/{projectId}
+                  {webhookUrl ||
+                    `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${projectId}`}
                 </Typography>
                 <IconButton
                   size="small"
@@ -926,7 +1014,7 @@ const DeploymentDetail: React.FC = () => {
                     color="text.secondary"
                     sx={{ fontSize: 10 }}
                   >
-                    checks every 60s
+                    {webhookRegistered ? "via webhook" : "polls every 60s"}
                   </Typography>
                 )}
               </Box>
@@ -1320,16 +1408,55 @@ const DeploymentDetail: React.FC = () => {
                       className={`history-chip history-chip-${dep.status}`}
                     />
                     {dep.commitHash && (
-                      <Typography
-                        variant="caption"
-                        className="history-commit"
+                      <Box
                         sx={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          color: "text.secondary",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          overflow: "hidden",
+                          maxWidth: "60%",
                         }}
                       >
-                        #{dep.commitHash}
-                      </Typography>
+                        <Typography
+                          variant="caption"
+                          component="a"
+                          href={dep.commitUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="history-commit"
+                          sx={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            color: dep.commitUrl
+                              ? "primary.main"
+                              : "text.secondary",
+                            textDecoration: "none",
+                            "&:hover": {
+                              textDecoration: dep.commitUrl
+                                ? "underline"
+                                : "none",
+                            },
+                            fontWeight: 600,
+                            flexShrink: 0,
+                          }}
+                        >
+                          #{dep.commitHash.substring(0, 7)}
+                        </Typography>
+                        {dep.commitMessage && (
+                          <Tooltip title={dep.commitMessage}>
+                            <Typography
+                              variant="body2"
+                              noWrap
+                              sx={{
+                                fontSize: 13,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {dep.commitMessage}
+                            </Typography>
+                          </Tooltip>
+                        )}
+                      </Box>
                     )}
                     <Box sx={{ flex: 1 }} />
                     {dep.commitHash && dep.status !== "running" && (
@@ -2524,6 +2651,172 @@ const DeploymentDetail: React.FC = () => {
           >
             Rollback
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Webhook Setup Guide Dialog */}
+      <Dialog
+        open={webhookGuideOpen}
+        onClose={() => setWebhookGuideOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>⚡ GitHub Webhook Setup</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Connect your GitHub repo so deploys happen{" "}
+            <strong>instantly</strong> on every push — no more 60-second
+            polling.
+          </Typography>
+
+          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+            Step 1 — Copy the Webhook URL
+          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              mb: 2,
+              p: 1.5,
+              bgcolor: "rgba(0,0,0,0.2)",
+              borderRadius: 1,
+            }}
+          >
+            <Typography
+              variant="body2"
+              sx={{
+                fontFamily: "monospace",
+                fontSize: 12,
+                flex: 1,
+                wordBreak: "break-all",
+              }}
+            >
+              {webhookUrl || `http://localhost:5012/api/webhook/${projectId}`}
+            </Typography>
+            <Tooltip title="Copy URL">
+              <IconButton size="small" onClick={copyWebhookUrl}>
+                <ContentCopyIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
+
+          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+            Step 2 — Copy the Secret
+          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              mb: 2,
+              p: 1.5,
+              bgcolor: "rgba(0,0,0,0.2)",
+              borderRadius: 1,
+            }}
+          >
+            <Typography
+              variant="body2"
+              sx={{
+                fontFamily: "monospace",
+                fontSize: 12,
+                flex: 1,
+                letterSpacing: showSecret ? 0 : 3,
+              }}
+            >
+              {showSecret
+                ? webhookSecret || "No secret set"
+                : "••••••••••••••••••••"}
+            </Typography>
+            <Tooltip title={showSecret ? "Hide" : "Reveal"}>
+              <IconButton size="small" onClick={() => setShowSecret((v) => !v)}>
+                <Typography sx={{ fontSize: 14 }}>
+                  {showSecret ? "🙈" : "👁"}
+                </Typography>
+              </IconButton>
+            </Tooltip>
+            {webhookSecret && (
+              <Tooltip title="Copy secret">
+                <IconButton
+                  size="small"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(webhookSecret);
+                    toast.success("Secret copied!");
+                  }}
+                >
+                  <ContentCopyIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
+
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Step 3 — Add Webhook in GitHub
+          </Typography>
+          <Box component="ol" sx={{ pl: 2, mb: 2, "& li": { mb: 0.5 } }}>
+            <Typography component="li" variant="body2">
+              Go to your GitHub repo →{" "}
+              <strong>Settings → Webhooks → Add webhook</strong>
+            </Typography>
+            <Typography component="li" variant="body2">
+              Paste the Webhook URL above into <em>Payload URL</em>
+            </Typography>
+            <Typography component="li" variant="body2">
+              Set <em>Content type</em> to <code>application/json</code>
+            </Typography>
+            <Typography component="li" variant="body2">
+              Paste the Secret into <em>Secret</em>
+            </Typography>
+            <Typography component="li" variant="body2">
+              Choose <strong>"Just the push event"</strong> → click{" "}
+              <strong>Add webhook</strong>
+            </Typography>
+          </Box>
+
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Step 4 — Mark as Done (disables slow polling)
+          </Typography>
+          <Box
+            sx={{
+              p: 1.5,
+              borderRadius: 1,
+              border: "1px solid",
+              borderColor: webhookRegistered ? "success.main" : "divider",
+              bgcolor: webhookRegistered
+                ? "rgba(46,160,67,0.08)"
+                : "transparent",
+            }}
+          >
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={webhookRegistered}
+                  onChange={(e) =>
+                    handleToggleWebhookRegistered(e.target.checked)
+                  }
+                  disabled={savingWebhookReg}
+                  color="success"
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2" fontWeight={600}>
+                    {webhookRegistered
+                      ? "⚡ Webhook active — polling disabled"
+                      : "Webhook not yet registered"}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {webhookRegistered
+                      ? "Deploys trigger instantly when you push to GitHub"
+                      : "Toggle after setting up webhook above"}
+                  </Typography>
+                </Box>
+              }
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setWebhookGuideOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

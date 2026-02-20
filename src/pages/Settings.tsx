@@ -91,6 +91,7 @@ const Settings: React.FC = () => {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearDays, setClearDays] = useState(30);
+  const [confirmGithubDisconnect, setConfirmGithubDisconnect] = useState(false);
 
   const [settings, setSettings] = useState({
     defaultInstallCmd: "npm install",
@@ -117,7 +118,58 @@ const Settings: React.FC = () => {
     fetchSettings();
     fetchSystemInfo();
     fetchNotificationSettings();
+
+    // Check for GitHub OAuth code or error
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const error = params.get("error");
+    const errorDescription = params.get("error_description");
+
+    if (code) {
+      // Immediately remove code from URL to prevent double-call from React StrictMode
+      window.history.replaceState({}, document.title, window.location.pathname);
+      handleGitHubCallback(code);
+    } else if (error) {
+      if (error === "access_denied") {
+        toast.error(
+          t("settings.githubAccessDenied", "GitHub connection denied by user"),
+        );
+      } else {
+        toast.error(errorDescription || "GitHub connection failed");
+      }
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, []);
+
+  const handleGitHubCallback = async (code: string) => {
+    const toastId = toast.loading("Connecting to GitHub...");
+    try {
+      await api.post("/auth/github", { code });
+      toast.success("GitHub connected successfully!", { id: toastId });
+      // Reload user data
+      window.location.reload();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to connect GitHub", {
+        id: toastId,
+      });
+    }
+  };
+
+  const handleGithubDisconnect = async () => {
+    try {
+      await api.delete("/auth/github");
+      toast.success(
+        t("settings.githubDisconnected", "GitHub disconnected successfully"),
+      );
+      setConfirmGithubDisconnect(false);
+      window.location.reload();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Failed to disconnect GitHub",
+      );
+    }
+  };
 
   const fetchNotificationSettings = async () => {
     try {
@@ -371,6 +423,78 @@ const Settings: React.FC = () => {
                 {user?.role}
               </Typography>
             </Box>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* GitHub Integration */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+          <Box sx={sectionStyle}>
+            <img
+              src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+              alt="GitHub"
+              width={24}
+              height={24}
+              style={{
+                filter: theme.palette.mode === "dark" ? "invert(1)" : "none",
+              }}
+            />
+            <Typography variant="h6" fontSize={16} fontWeight={600}>
+              GitHub Integration
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <Box>
+              <Typography fontWeight={600}>
+                {user?.githubUsername
+                  ? `Connected as ${user.githubUsername}`
+                  : "Not connected"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {user?.githubUsername
+                  ? "Your account is linked to GitHub."
+                  : "Connect your GitHub account to import repositories and enable auto-deployments."}
+              </Typography>
+            </Box>
+            {user?.githubUsername ? (
+              <Button
+                variant="outlined"
+                color="error"
+                sx={{ textTransform: "none" }}
+                onClick={() => setConfirmGithubDisconnect(true)}
+              >
+                Disconnect
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                sx={{
+                  bgcolor: "#24292e",
+                  color: "white",
+                  textTransform: "none",
+                  "&:hover": { bgcolor: "#1b1f23" },
+                }}
+                onClick={async () => {
+                  try {
+                    const res = await api.get("/auth/github/auth-url");
+                    if (res.data.url) {
+                      window.location.href = res.data.url;
+                    }
+                  } catch (error) {
+                    toast.error("Failed to get GitHub Auth URL");
+                  }
+                }}
+              >
+                Connect GitHub
+              </Button>
+            )}
           </Box>
         </CardContent>
       </Card>
@@ -1023,6 +1147,34 @@ const Settings: React.FC = () => {
             onClick={handleClearHistory}
           >
             {t("common.delete")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* GitHub Disconnect Confirmation Dialog */}
+      <Dialog
+        open={confirmGithubDisconnect}
+        onClose={() => setConfirmGithubDisconnect(false)}
+      >
+        <DialogTitle>{t("settings.githubDisconnectTitle")}</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            {t("settings.githubDisconnectConfirm")}
+          </Typography>
+          <Alert severity="warning">
+            {t("settings.githubDisconnectWarning")}
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setConfirmGithubDisconnect(false)}>
+            {t("common.cancel")}
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleGithubDisconnect}
+          >
+            {t("common.disconnect")}
           </Button>
         </DialogActions>
       </Dialog>
