@@ -36,8 +36,10 @@ import BackupIcon from "@mui/icons-material/Backup";
 import RestoreIcon from "@mui/icons-material/Restore";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
+import TerminalIcon from "@mui/icons-material/Terminal";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import { DatabaseStudio } from "../components/DatabaseStudio";
 
 interface DockerContainer {
   id: string;
@@ -62,8 +64,14 @@ const DatabaseManager: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState(0);
 
+  // Studio Dialog
+  const [studioOpen, setStudioOpen] = useState(false);
+  const [studioContainer, setStudioContainer] =
+    useState<DockerContainer | null>(null);
+
   // Backup Dialog
   const [backupOpen, setBackupOpen] = useState(false);
+
   const [selectedContainer, setSelectedContainer] =
     useState<DockerContainer | null>(null);
   const [backupConfig, setBackupConfig] = useState({
@@ -127,6 +135,11 @@ const DatabaseManager: React.FC = () => {
     setSelectedContainer(container);
     setBackupConfig({ dbName: "", dbUser: "", dbPassword: "" });
     setBackupOpen(true);
+  };
+
+  const handleStudioClick = (c: DockerContainer) => {
+    setStudioContainer(c);
+    setStudioOpen(true);
   };
 
   const handleBackupSubmit = async () => {
@@ -381,16 +394,36 @@ const DatabaseManager: React.FC = () => {
                         </TableCell>
                         <TableCell>{c.status}</TableCell>
                         <TableCell align="right">
-                          <Button
-                            startIcon={<BackupIcon />}
-                            size="small"
-                            onClick={() => handleBackupClick(c)}
-                            disabled={
-                              c.type === "unknown" || c.type === "redis"
-                            }
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "flex-end",
+                              gap: 1,
+                            }}
                           >
-                            {t("database.backup")}
-                          </Button>
+                            <Button
+                              startIcon={<TerminalIcon />}
+                              size="small"
+                              variant="contained"
+                              disableElevation
+                              onClick={() => handleStudioClick(c)}
+                              disabled={
+                                c.type === "unknown" || c.type === "redis"
+                              }
+                            >
+                              Open Studio
+                            </Button>
+                            <Button
+                              startIcon={<BackupIcon />}
+                              size="small"
+                              onClick={() => handleBackupClick(c)}
+                              disabled={
+                                c.type === "unknown" || c.type === "redis"
+                              }
+                            >
+                              {t("database.backup")}
+                            </Button>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -455,16 +488,29 @@ const DatabaseManager: React.FC = () => {
                       >
                         Status: {c.status}
                       </Typography>
-                      <Button
-                        startIcon={<BackupIcon />}
-                        size="small"
-                        variant="outlined"
-                        onClick={() => handleBackupClick(c)}
-                        disabled={c.type === "unknown" || c.type === "redis"}
-                        fullWidth
-                      >
-                        {t("database.backup")}
-                      </Button>
+                      <Box sx={{ display: "flex", gap: 1 }}>
+                        <Button
+                          startIcon={<TerminalIcon />}
+                          size="small"
+                          variant="contained"
+                          disableElevation
+                          onClick={() => handleStudioClick(c)}
+                          disabled={c.type === "unknown" || c.type === "redis"}
+                          fullWidth
+                        >
+                          Studio
+                        </Button>
+                        <Button
+                          startIcon={<BackupIcon />}
+                          size="small"
+                          variant="outlined"
+                          onClick={() => handleBackupClick(c)}
+                          disabled={c.type === "unknown" || c.type === "redis"}
+                          fullWidth
+                        >
+                          {t("database.backup")}
+                        </Button>
+                      </Box>
                     </CardContent>
                   </Card>
                 ))}
@@ -863,6 +909,13 @@ const DatabaseManager: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <DatabaseStudio
+        open={studioOpen}
+        onClose={() => setStudioOpen(false)}
+        serverId={selectedServer._id}
+        container={studioContainer}
+      />
     </Box>
   );
 };
