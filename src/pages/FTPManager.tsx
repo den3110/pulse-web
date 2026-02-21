@@ -1687,6 +1687,7 @@ const FTPManager: React.FC = () => {
             display: "flex",
             alignItems: "center",
             gap: 1,
+            flexWrap: "wrap",
           }}
         >
           <Tooltip title={t("ftp.goUp")}>
@@ -1821,6 +1822,13 @@ const FTPManager: React.FC = () => {
               setPage(0);
             }}
             labelRowsPerPage={t("ftp.rowsPerPage")}
+            sx={{
+              ".MuiTablePagination-toolbar": {
+                px: { xs: 0, sm: 2 },
+                flexWrap: "wrap",
+                justifyContent: "flex-end",
+              },
+            }}
           />
         </CardContent>
       </Card>
@@ -1879,6 +1887,14 @@ const FTPManager: React.FC = () => {
             mb: 1,
             alignItems: { xs: "stretch", sm: "center" },
             flexDirection: { xs: "column", sm: "row" },
+            position: "sticky",
+            top: { xs: 56, sm: 64 }, // AppBar height
+            zIndex: 10,
+            bgcolor: "background.default",
+            pt: 1.5,
+            pb: 1.5,
+            mx: 0,
+            px: 0,
           }}
         >
           <TextField

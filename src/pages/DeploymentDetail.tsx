@@ -32,6 +32,7 @@ import {
   useMediaQuery,
   useTheme,
   CircularProgress,
+  Drawer,
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -739,11 +740,16 @@ const DeploymentDetail: React.FC = () => {
               gap: 1,
             }}
           >
-            <Box className="project-title-group">
+            <Box className="project-title-group" sx={{ minWidth: 0, flex: 1 }}>
               <Typography
                 variant="h6"
                 fontWeight={600}
                 className="project-name"
+                sx={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
               >
                 📦 {project?.name}
               </Typography>
@@ -927,20 +933,30 @@ const DeploymentDetail: React.FC = () => {
             {/* Webhook — full setup guide */}
             <Box
               className="detail-item detail-webhook"
-              sx={{ gridColumn: "1 / -1" }}
+              sx={{ gridColumn: "1 / -1", minWidth: 0 }}
             >
               <Box
                 sx={{
                   display: "flex",
-                  alignItems: "center",
+                  alignItems: { xs: "flex-start", sm: "center" },
                   justifyContent: "space-between",
+                  flexDirection: { xs: "column", sm: "row" },
                   mb: 1,
+                  gap: 1,
                 }}
               >
                 <Typography variant="caption" color="text.secondary">
                   GitHub Webhook
                 </Typography>
-                <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    alignItems: "center",
+                    alignSelf: { xs: "flex-start", sm: "auto" },
+                    flexWrap: "wrap",
+                  }}
+                >
                   {webhookRegistered ? (
                     <Chip
                       label="⚡ Webhook Active"
@@ -965,13 +981,20 @@ const DeploymentDetail: React.FC = () => {
                       fetchWebhookInfo();
                       setWebhookGuideOpen(true);
                     }}
-                    sx={{ fontSize: 11 }}
+                    sx={{ fontSize: 11, whiteSpace: "nowrap" }}
                   >
                     Setup Guide
                   </Button>
                 </Box>
               </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  minWidth: 0,
+                }}
+              >
                 <Typography
                   variant="body2"
                   sx={{
@@ -982,6 +1005,7 @@ const DeploymentDetail: React.FC = () => {
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
                     flex: 1,
+                    minWidth: 0,
                   }}
                 >
                   {webhookUrl ||
@@ -1034,8 +1058,11 @@ const DeploymentDetail: React.FC = () => {
             className="deployment-actions"
             sx={{
               display: "flex",
-              gap: { xs: 0.5, md: 1.5 },
+              gap: { xs: 1, md: 1.5 },
               flexWrap: "wrap",
+              "& > button": {
+                flex: { xs: "1 1 calc(50% - 8px)", sm: "0 1 auto" },
+              },
             }}
           >
             <Button
@@ -1123,7 +1150,7 @@ const DeploymentDetail: React.FC = () => {
               startIcon={<DeleteForeverIcon />}
               onClick={() => setDeleteOpen(true)}
               disabled={deploying}
-              sx={{ ml: "auto" }}
+              sx={{ ml: { xs: 0, sm: "auto" } }}
             >
               Delete
             </Button>
@@ -1707,14 +1734,15 @@ const DeploymentDetail: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Edit Project Dialog */}
-      <Dialog
+      {/* Edit Project Drawer */}
+      <Drawer
+        anchor="right"
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        fullScreen={isMobile}
-        className="edit-project-dialog"
+        className="edit-project-drawer"
+        PaperProps={{
+          sx: { width: { xs: "100%", sm: 500 }, p: 0 },
+        }}
       >
         <form
           className="edit-project-form"
@@ -1745,12 +1773,24 @@ const DeploymentDetail: React.FC = () => {
             }
           }}
         >
-          <DialogTitle sx={{ fontWeight: 600 }} className="edit-dialog-title">
-            Edit Project
-          </DialogTitle>
-          <DialogContent
-            sx={{ pt: "16px !important" }}
-            className="edit-dialog-content"
+          <Box
+            sx={{
+              p: 2,
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+            className="edit-drawer-title"
+          >
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Edit Project
+            </Typography>
+          </Box>
+          <Box
+            sx={{ p: 3, overflowY: "auto", flex: 1 }}
+            className="edit-drawer-content"
           >
             <TextField
               label="Project Name"
@@ -2118,8 +2158,18 @@ const DeploymentDetail: React.FC = () => {
               label="Auto-deploy"
               className="label-auto-deploy"
             />
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2 }} className="edit-dialog-actions">
+          </Box>
+          <Box
+            sx={{
+              p: 2,
+              borderTop: "1px solid",
+              borderColor: "divider",
+              display: "flex",
+              gap: 1,
+              justifyContent: "flex-end",
+            }}
+            className="edit-drawer-actions"
+          >
             <Button onClick={() => setEditOpen(false)} className="btn-cancel">
               Cancel
             </Button>
@@ -2179,9 +2229,9 @@ const DeploymentDetail: React.FC = () => {
             >
               Save & Restart
             </Button>
-          </DialogActions>
+          </Box>
         </form>
-      </Dialog>
+      </Drawer>
 
       {/* Delete Confirmation Dialog */}
       <Dialog

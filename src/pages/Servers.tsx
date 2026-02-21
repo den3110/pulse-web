@@ -56,6 +56,7 @@ import TerminalIcon from "@mui/icons-material/Terminal";
 import SearchIcon from "@mui/icons-material/Search";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ContentPasteIcon from "@mui/icons-material/ContentPaste";
+import DragHandleIcon from "@mui/icons-material/DragHandle";
 import Drawer from "@mui/material/Drawer";
 import Skeleton from "@mui/material/Skeleton";
 import InputAdornment from "@mui/material/InputAdornment";
@@ -618,6 +619,18 @@ const Servers: React.FC = () => {
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
+                        <Tooltip title="Drag to reorder">
+                          <IconButton
+                            size="small"
+                            className="drag-handle"
+                            sx={{
+                              cursor: "grab",
+                              "&:active": { cursor: "grabbing" },
+                            }}
+                          >
+                            <DragHandleIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </Box>
 
                       {/* Stats Panel */}

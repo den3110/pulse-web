@@ -230,17 +230,20 @@ const Layout: React.FC = () => {
         >
           {t("settings.appearance")}
         </Typography>
-        <Box sx={{ display: "flex", gap: 1 }}>
+        <Box sx={{ display: "flex", gap: 0.5 }}>
           <Button
             variant="outlined"
             size="small"
-            startIcon={<LanguageIcon />}
+            startIcon={<LanguageIcon sx={{ fontSize: "16px !important" }} />}
             onClick={toggleLang}
             fullWidth
             sx={{
               justifyContent: "flex-start",
               color: "text.primary",
               borderColor: "divider",
+              whiteSpace: "nowrap",
+              fontSize: { xs: 11, sm: 12 },
+              px: 1,
             }}
           >
             {i18n.language === "en" ? "Tiếng Việt" : "English"}
@@ -248,13 +251,22 @@ const Layout: React.FC = () => {
           <Button
             variant="outlined"
             size="small"
-            startIcon={mode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
+            startIcon={
+              mode === "dark" ? (
+                <LightModeIcon sx={{ fontSize: "16px !important" }} />
+              ) : (
+                <DarkModeIcon sx={{ fontSize: "16px !important" }} />
+              )
+            }
             onClick={toggleTheme}
             fullWidth
             sx={{
               justifyContent: "flex-start",
               color: "text.primary",
               borderColor: "divider",
+              whiteSpace: "nowrap",
+              fontSize: { xs: 11, sm: 12 },
+              px: 1,
             }}
           >
             {mode === "dark" ? t("common.lightMode") : t("common.darkMode")}
@@ -423,7 +435,7 @@ const Layout: React.FC = () => {
 
         <Box
           component="main"
-          sx={{ p: { xs: 2, md: 4 }, mt: 8, overflow: "hidden" }}
+          sx={{ p: { xs: 2, md: 4 }, mt: 8, overflow: "visible" }}
         >
           <Outlet />
         </Box>

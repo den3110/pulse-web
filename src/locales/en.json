@@ -104,7 +104,8 @@
     "created": "Created",
     "more": "More",
     "saving": "Saving...",
-    "reorderFailed": "Failed to reorder items"
+    "reorderFailed": "Failed to reorder items",
+    "project": "Project"
   },
   "auth": {
     "login": "Login",
@@ -143,7 +144,8 @@
     "createFirstDeployment": "Create a project and trigger your first deployment",
     "systemResources": "System Resources",
     "statsError": "Failed to load system stats",
-    "selectServerToViewStats": "Select a server to view system resources"
+    "selectServerToViewStats": "Select a server to view system resources",
+    "triggeredBy": "Triggered By"
   },
   "servers": {
     "title": "Servers",

@@ -21,6 +21,8 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import StopIcon from "@mui/icons-material/Stop";
 import toast from "react-hot-toast";
 
+import DragHandleIcon from "@mui/icons-material/DragHandle";
+
 interface Server {
   _id: string;
   name: string;
@@ -338,7 +340,12 @@ const ProjectCard = memo(function ProjectCard({
         {/* Action Buttons */}
         <Box
           className="project-actions"
-          sx={{ display: "flex", gap: { xs: 0.5, md: 1 }, flexWrap: "wrap" }}
+          sx={{
+            display: "flex",
+            gap: { xs: 0.5, md: 1 },
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
         >
           {isActive ? (
             <>
@@ -405,6 +412,15 @@ const ProjectCard = memo(function ProjectCard({
           >
             {t("common.delete")}
           </Button>
+          <Tooltip title="Drag to reorder">
+            <IconButton
+              size="small"
+              className="drag-handle"
+              sx={{ cursor: "grab", "&:active": { cursor: "grabbing" } }}
+            >
+              <DragHandleIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Box>
       </CardContent>
     </Card>

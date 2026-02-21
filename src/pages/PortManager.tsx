@@ -1010,6 +1010,9 @@ const PortManager: React.FC = () => {
             p: 2,
             borderBottom: "1px solid",
             borderColor: "divider",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
           <Typography variant="h6" fontWeight={700}>

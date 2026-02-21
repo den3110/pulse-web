@@ -117,7 +117,8 @@
     "created": "Đã tạo",
     "more": "Khác",
     "saving": "Đang lưu...",
-    "reorderFailed": "Sắp xếp thất bại"
+    "reorderFailed": "Sắp xếp thất bại",
+    "project": "Dự án"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -156,7 +157,8 @@
     "createFirstDeployment": "Tạo dự án và bắt đầu triển khai đầu tiên",
     "systemResources": "Tài nguyên hệ thống",
     "statsError": "Không thể tải thông số server",
-    "selectServerToViewStats": "Chọn server để xem tài nguyên"
+    "selectServerToViewStats": "Chọn server để xem tài nguyên",
+    "triggeredBy": "Khởi tạo bởi"
   },
   "servers": {
     "title": "Máy chủ",
