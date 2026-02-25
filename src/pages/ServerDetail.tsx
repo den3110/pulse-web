@@ -24,6 +24,8 @@ import {
   InputLabel,
   Tooltip,
   CircularProgress,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DnsIcon from "@mui/icons-material/Dns";
@@ -35,6 +37,7 @@ import FolderIcon from "@mui/icons-material/Folder";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import SEO from "../components/SEO";
+import { ServerTimeMachine } from "../components/ServerTimeMachine";
 
 interface Server {
   _id: string;
@@ -77,6 +80,7 @@ const ServerDetail: React.FC = () => {
   const [statsLoading, setStatsLoading] = useState(false);
   const [projects, setProjects] = useState<RelatedProject[]>([]);
   const [testing, setTesting] = useState(false);
+  const [currentTab, setCurrentTab] = useState(0);
 
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false);
@@ -390,596 +394,628 @@ const ServerDetail: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Server Info + Stats row */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", md: "row" },
-          gap: 2.5,
-          mb: 3,
-        }}
-      >
-        {/* Server Info */}
-        <Card className="server-info-card" sx={{ flex: 1 }}>
-          <CardContent
-            className="server-info-content"
-            sx={{ p: { xs: 2, md: 3 } }}
-          >
-            <Typography
-              className="server-info-title"
-              variant="subtitle2"
-              fontWeight={600}
-              sx={{ mb: 2 }}
-            >
-              🖥️ {t("servers.serverInfo")}
-            </Typography>
-            <Box
-              className="server-info-list"
-              sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
-            >
-              {[
-                { label: t("servers.host"), value: server.host },
-                { label: t("servers.port"), value: server.port },
-                { label: t("servers.username"), value: server.username },
-                {
-                  label: t("servers.authType"),
-                  value: server.authType === "key" ? "SSH Key" : "Password",
-                },
-                {
-                  label: t("servers.lastChecked"),
-                  value: server.lastCheckedAt
-                    ? new Date(server.lastCheckedAt).toLocaleString("vi-VN")
-                    : t("common.never"),
-                },
-                {
-                  label: t("common.created"),
-                  value: new Date(server.createdAt).toLocaleString("vi-VN"),
-                },
-              ].map((item) => (
-                <Box
-                  key={item.label}
-                  className="server-info-row"
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    py: 0.5,
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    gap: 2,
-                  }}
-                >
-                  <Typography
-                    className="server-info-label"
-                    variant="body2"
-                    color="text.secondary"
-                    noWrap
-                    sx={{ minWidth: 0, flexShrink: 0 }}
-                  >
-                    {item.label}
-                  </Typography>
-                  <Typography
-                    className="server-info-value"
-                    variant="body2"
-                    fontWeight={500}
-                    noWrap
-                    sx={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      minWidth: 0,
-                      textAlign: "right",
-                    }}
-                  >
-                    {item.value}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-          </CardContent>
-        </Card>
-
-        {/* System Stats */}
-        <Card className="system-stats-card" sx={{ flex: 1 }}>
-          <CardContent
-            className="stats-card-content"
-            sx={{ p: { xs: 2, md: 3 } }}
-          >
-            <Box
-              className="stats-header"
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                mb: 2,
-              }}
-            >
-              <Typography
-                className="stats-title"
-                variant="subtitle2"
-                fontWeight={600}
-              >
-                📊 {t("serverDetail.systemStats")}
-              </Typography>
-              <Tooltip title="Refresh">
-                <IconButton
-                  className="stats-refresh-btn"
-                  size="small"
-                  onClick={fetchStats}
-                  disabled={statsLoading}
-                >
-                  {statsLoading ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <RefreshIcon fontSize="small" />
-                  )}
-                </IconButton>
-              </Tooltip>
-            </Box>
-
-            {!stats ? (
-              <Typography
-                className="stats-loading-text"
-                variant="body2"
-                color="text.secondary"
-              >
-                {statsLoading
-                  ? t("serverDetail.loading")
-                  : t("serverDetail.noStats")}
-              </Typography>
-            ) : (
-              <Box
-                className="stats-container"
-                sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-              >
-                {/* CPU */}
-                <Box className="stats-cpu-section">
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      mb: 0.5,
-                    }}
-                  >
-                    <Typography variant="caption" fontWeight={600}>
-                      CPU
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {stats.cpu}
-                    </Typography>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={parsePercent(stats.cpu)}
-                    sx={{
-                      height: 8,
-                      borderRadius: 4,
-                      bgcolor: "rgba(255,255,255,0.05)",
-                      "& .MuiLinearProgress-bar": {
-                        bgcolor:
-                          parsePercent(stats.cpu) > 80
-                            ? "error.main"
-                            : "primary.main",
-                        borderRadius: 4,
-                      },
-                    }}
-                  />
-                </Box>
-                {/* RAM */}
-                <Box className="stats-ram-section">
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      mb: 0.5,
-                    }}
-                  >
-                    <Typography variant="caption" fontWeight={600}>
-                      RAM
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {stats.memory?.used || "?"} / {stats.memory?.total || "?"}{" "}
-                      ({stats.memory?.percent || "0%"})
-                    </Typography>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={parsePercent(stats.memory?.percent)}
-                    sx={{
-                      height: 8,
-                      borderRadius: 4,
-                      bgcolor: "rgba(255,255,255,0.05)",
-                      "& .MuiLinearProgress-bar": {
-                        bgcolor:
-                          parsePercent(stats.memory?.percent) > 85
-                            ? "error.main"
-                            : "success.main",
-                        borderRadius: 4,
-                      },
-                    }}
-                  />
-                </Box>
-                {/* Disk */}
-                <Box className="stats-disk-section">
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      mb: 0.5,
-                    }}
-                  >
-                    <Typography variant="caption" fontWeight={600}>
-                      Disk
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {stats.disk?.used || "?"} / {stats.disk?.total || "?"} (
-                      {stats.disk?.percent || "0%"})
-                    </Typography>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={parsePercent(stats.disk?.percent)}
-                    sx={{
-                      height: 8,
-                      borderRadius: 4,
-                      bgcolor: "rgba(255,255,255,0.05)",
-                      "& .MuiLinearProgress-bar": {
-                        bgcolor: "warning.main",
-                        borderRadius: 4,
-                      },
-                    }}
-                  />
-                </Box>
-                {/* Uptime + Load */}
-                <Box
-                  className="stats-footer"
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    pt: 1,
-                    borderTop: "1px solid rgba(255,255,255,0.06)",
-                  }}
-                >
-                  <Typography variant="caption" color="text.secondary">
-                    ⏱ {stats.uptime}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Load: {stats.loadAvg}
-                  </Typography>
-                </Box>
-              </Box>
-            )}
-          </CardContent>
-        </Card>
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+        <Tabs
+          value={currentTab}
+          onChange={(_, newValue) => setCurrentTab(newValue)}
+          aria-label="server detail tabs"
+          textColor="primary"
+          indicatorColor="primary"
+        >
+          <Tab label="Overview & Terminal" />
+          <Tab label="Time Machine" />
+        </Tabs>
       </Box>
 
-      {/* Remote Terminal */}
-      <Card className="remote-terminal-card" sx={{ mb: 3 }}>
-        <CardContent className="terminal-card-content" sx={{ p: 0 }}>
+      {/* Overview Tab */}
+      {currentTab === 0 && (
+        <>
+          {/* Server Info + Stats row */}
           <Box
-            className="terminal-container"
             sx={{
-              borderRadius: 2,
-              overflow: "hidden",
+              display: "flex",
+              flexDirection: { xs: "column", md: "row" },
+              gap: 2.5,
+              mb: 3,
             }}
           >
-            {/* Title bar */}
-            <Box
-              className="terminal-title-bar"
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                px: 2,
-                py: 0.8,
-                bgcolor: "#2d2d2d",
-                borderBottom: "1px solid #404040",
-              }}
-            >
-              <Box
-                className="terminal-window-controls"
-                sx={{ display: "flex", gap: 0.8, alignItems: "center" }}
+            {/* Server Info */}
+            <Card className="server-info-card" sx={{ flex: 1 }}>
+              <CardContent
+                className="server-info-content"
+                sx={{ p: { xs: 2, md: 3 } }}
               >
-                <Box
-                  className="control-red"
-                  sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    bgcolor: "#ff5f57",
-                  }}
-                />
-                <Box
-                  className="control-yellow"
-                  sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    bgcolor: "#ffbd2e",
-                  }}
-                />
-                <Box
-                  className="control-green"
-                  sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    bgcolor: "#28c840",
-                  }}
-                />
-                <Box
-                  className="terminal-header-info"
-                  sx={{ display: "flex", alignItems: "center" }}
+                <Typography
+                  className="server-info-title"
+                  variant="subtitle2"
+                  fontWeight={600}
+                  sx={{ mb: 2 }}
                 >
-                  <TerminalIcon sx={{ ml: 1.5, fontSize: 16, color: "#999" }} />
-                  <Typography
-                    sx={{
-                      fontSize: 12,
-                      color: "#999",
-                      fontFamily: "'JetBrains Mono', monospace",
-                    }}
-                  >
-                    {server.username}@{server.host} — bash
-                  </Typography>
-                </Box>
-              </Box>
-              <Button
-                className="terminal-clear-btn"
-                size="small"
-                sx={{
-                  color: "#999",
-                  fontSize: 10,
-                  minWidth: 0,
-                  textTransform: "none",
-                }}
-                onClick={() => setTermOutput([])}
-              >
-                {t("serverDetail.clear")}
-              </Button>
-            </Box>
-
-            {/* Terminal body */}
-            <Box
-              className="terminal-body"
-              ref={termRef}
-              onClick={() => {
-                const input = document.getElementById("term-input-field");
-                input?.focus();
-              }}
-              sx={{
-                bgcolor: "#0c0c0c",
-                px: 1.5,
-                py: 1,
-                minHeight: 350,
-                maxHeight: 550,
-                overflow: "auto",
-                fontFamily:
-                  "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
-                fontSize: { xs: 11, sm: 13 },
-                lineHeight: 1.5,
-                cursor: "text",
-                "&::-webkit-scrollbar": { width: 6 },
-                "&::-webkit-scrollbar-track": { bgcolor: "transparent" },
-                "&::-webkit-scrollbar-thumb": {
-                  bgcolor: "#333",
-                  borderRadius: 3,
-                },
-              }}
-            >
-              {termOutput.length === 0 && !termLoading && (
-                <>
-                  <Box className="terminal-welcome-msg" sx={{ color: "#5f5" }}>
-                    {t("serverDetail.welcome", { name: server.name })} (
-                    {server.host})
-                  </Box>
-                  <Box
-                    className="terminal-welcome-sub"
-                    sx={{ color: "#888", mb: 1 }}
-                  >
-                    {t("serverDetail.typeCommands")}
-                  </Box>
-                </>
-              )}
-
-              {termOutput.map((entry, i) => (
-                <Box key={i} className="terminal-output-line" sx={{ mb: 0.5 }}>
-                  <Box className="terminal-line-cmd">
-                    <span style={{ color: "#5f5" }}>{prompt}</span>{" "}
-                    <span style={{ color: "#fff" }}>{entry.command}</span>
-                  </Box>
-                  {entry.stdout && (
+                  🖥️ {t("servers.serverInfo")}
+                </Typography>
+                <Box
+                  className="server-info-list"
+                  sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
+                >
+                  {[
+                    { label: t("servers.host"), value: server.host },
+                    { label: t("servers.port"), value: server.port },
+                    { label: t("servers.username"), value: server.username },
+                    {
+                      label: t("servers.authType"),
+                      value: server.authType === "key" ? "SSH Key" : "Password",
+                    },
+                    {
+                      label: t("servers.lastChecked"),
+                      value: server.lastCheckedAt
+                        ? new Date(server.lastCheckedAt).toLocaleString("vi-VN")
+                        : t("common.never"),
+                    },
+                    {
+                      label: t("common.created"),
+                      value: new Date(server.createdAt).toLocaleString("vi-VN"),
+                    },
+                  ].map((item) => (
                     <Box
-                      className="terminal-line-stdout"
+                      key={item.label}
+                      className="server-info-row"
                       sx={{
-                        color: "#ccc",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-all",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        py: 0.5,
+                        borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        gap: 2,
                       }}
                     >
-                      {entry.stdout}
+                      <Typography
+                        className="server-info-label"
+                        variant="body2"
+                        color="text.secondary"
+                        noWrap
+                        sx={{ minWidth: 0, flexShrink: 0 }}
+                      >
+                        {item.label}
+                      </Typography>
+                      <Typography
+                        className="server-info-value"
+                        variant="body2"
+                        fontWeight={500}
+                        noWrap
+                        sx={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          minWidth: 0,
+                          textAlign: "right",
+                        }}
+                      >
+                        {item.value}
+                      </Typography>
                     </Box>
-                  )}
-                  {entry.stderr && (
-                    <Box
-                      className="terminal-line-stderr"
-                      sx={{
-                        color: "#f44",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-all",
-                      }}
-                    >
-                      {entry.stderr}
-                    </Box>
-                  )}
+                  ))}
                 </Box>
-              ))}
+              </CardContent>
+            </Card>
 
-              {termLoading && (
+            {/* System Stats */}
+            <Card className="system-stats-card" sx={{ flex: 1 }}>
+              <CardContent
+                className="stats-card-content"
+                sx={{ p: { xs: 2, md: 3 } }}
+              >
                 <Box
-                  className="terminal-loading-indicator"
-                  sx={{ color: "#888" }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                    }}
-                  >
-                    <Skeleton variant="circular" width={10} height={10} />
-                    <span>{t("serverDetail.running")}</span>
-                  </Box>
-                </Box>
-              )}
-
-              {!termLoading && (
-                <Box
-                  className="terminal-input-line"
-                  sx={{ display: "flex", alignItems: "center" }}
-                >
-                  <span
-                    className="terminal-prompt"
-                    style={{ color: "#5f5", whiteSpace: "nowrap" }}
-                  >
-                    {prompt}
-                  </span>
-                  &nbsp;
-                  <input
-                    id="term-input-field"
-                    className="terminal-input"
-                    value={termInput}
-                    onChange={(e) => setTermInput(e.target.value)}
-                    onKeyDown={async (e) => {
-                      if (e.key === "Enter") {
-                        await runCommand(termInput.trim());
-                      } else if (e.key === "ArrowUp") {
-                        e.preventDefault();
-                        if (termCmdHistory.length > 0) {
-                          const next = Math.min(
-                            termCmdIndex + 1,
-                            termCmdHistory.length - 1,
-                          );
-                          setTermCmdIndex(next);
-                          setTermInput(termCmdHistory[next]);
-                        }
-                      } else if (e.key === "ArrowDown") {
-                        e.preventDefault();
-                        if (termCmdIndex > 0) {
-                          const next = termCmdIndex - 1;
-                          setTermCmdIndex(next);
-                          setTermInput(termCmdHistory[next]);
-                        } else {
-                          setTermCmdIndex(-1);
-                          setTermInput("");
-                        }
-                      }
-                    }}
-                    disabled={termLoading}
-                    autoFocus
-                    style={{
-                      flex: 1,
-                      background: "transparent",
-                      border: "none",
-                      outline: "none",
-                      color: "#fff",
-                      fontFamily:
-                        "'JetBrains Mono', 'Cascadia Code', monospace",
-                      fontSize: "inherit",
-                      caretColor: "#5f5",
-                      padding: 0,
-                    }}
-                  />
-                </Box>
-              )}
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Related Projects */}
-      {projects.length > 0 && (
-        <Card className="related-projects-card">
-          <CardContent className="projects-card-content" sx={{ p: 3 }}>
-            <Typography
-              className="projects-title"
-              variant="subtitle2"
-              fontWeight={600}
-              sx={{ mb: 2 }}
-            >
-              <FolderIcon
-                className="projects-icon"
-                sx={{ fontSize: 18, mr: 1, verticalAlign: "text-bottom" }}
-              />
-              {t("serverDetail.projectsOnServer")} ({projects.length})
-            </Typography>
-            <Box
-              className="projects-list"
-              sx={{ display: "flex", flexDirection: "column", gap: 1 }}
-            >
-              {projects.map((p) => (
-                <Box
-                  key={p._id}
-                  className="project-item"
-                  onClick={() => navigate(`/projects/${p._id}/deploy`)}
+                  className="stats-header"
                   sx={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    p: 1.5,
-                    borderRadius: 2,
-                    bgcolor: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    "&:hover": {
-                      bgcolor: "rgba(255,255,255,0.04)",
-                      transform: "translateX(4px)",
+                    mb: 2,
+                  }}
+                >
+                  <Typography
+                    className="stats-title"
+                    variant="subtitle2"
+                    fontWeight={600}
+                  >
+                    📊 {t("serverDetail.systemStats")}
+                  </Typography>
+                  <Tooltip title="Refresh">
+                    <IconButton
+                      className="stats-refresh-btn"
+                      size="small"
+                      onClick={fetchStats}
+                      disabled={statsLoading}
+                    >
+                      {statsLoading ? (
+                        <CircularProgress size={16} color="inherit" />
+                      ) : (
+                        <RefreshIcon fontSize="small" />
+                      )}
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+
+                {!stats ? (
+                  <Typography
+                    className="stats-loading-text"
+                    variant="body2"
+                    color="text.secondary"
+                  >
+                    {statsLoading
+                      ? t("serverDetail.loading")
+                      : t("serverDetail.noStats")}
+                  </Typography>
+                ) : (
+                  <Box
+                    className="stats-container"
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {/* CPU */}
+                    <Box className="stats-cpu-section">
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mb: 0.5,
+                        }}
+                      >
+                        <Typography variant="caption" fontWeight={600}>
+                          CPU
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {stats.cpu}
+                        </Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={parsePercent(stats.cpu)}
+                        sx={{
+                          height: 8,
+                          borderRadius: 4,
+                          bgcolor: "rgba(255,255,255,0.05)",
+                          "& .MuiLinearProgress-bar": {
+                            bgcolor:
+                              parsePercent(stats.cpu) > 80
+                                ? "error.main"
+                                : "primary.main",
+                            borderRadius: 4,
+                          },
+                        }}
+                      />
+                    </Box>
+                    {/* RAM */}
+                    <Box className="stats-ram-section">
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mb: 0.5,
+                        }}
+                      >
+                        <Typography variant="caption" fontWeight={600}>
+                          RAM
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {stats.memory?.used || "?"} /{" "}
+                          {stats.memory?.total || "?"} (
+                          {stats.memory?.percent || "0%"})
+                        </Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={parsePercent(stats.memory?.percent)}
+                        sx={{
+                          height: 8,
+                          borderRadius: 4,
+                          bgcolor: "rgba(255,255,255,0.05)",
+                          "& .MuiLinearProgress-bar": {
+                            bgcolor:
+                              parsePercent(stats.memory?.percent) > 85
+                                ? "error.main"
+                                : "success.main",
+                            borderRadius: 4,
+                          },
+                        }}
+                      />
+                    </Box>
+                    {/* Disk */}
+                    <Box className="stats-disk-section">
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mb: 0.5,
+                        }}
+                      >
+                        <Typography variant="caption" fontWeight={600}>
+                          Disk
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {stats.disk?.used || "?"} / {stats.disk?.total || "?"}{" "}
+                          ({stats.disk?.percent || "0%"})
+                        </Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={parsePercent(stats.disk?.percent)}
+                        sx={{
+                          height: 8,
+                          borderRadius: 4,
+                          bgcolor: "rgba(255,255,255,0.05)",
+                          "& .MuiLinearProgress-bar": {
+                            bgcolor: "warning.main",
+                            borderRadius: 4,
+                          },
+                        }}
+                      />
+                    </Box>
+                    {/* Uptime + Load */}
+                    <Box
+                      className="stats-footer"
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        pt: 1,
+                        borderTop: "1px solid rgba(255,255,255,0.06)",
+                      }}
+                    >
+                      <Typography variant="caption" color="text.secondary">
+                        ⏱ {stats.uptime}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Load: {stats.loadAvg}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Box>
+
+          {/* Remote Terminal */}
+          <Card className="remote-terminal-card" sx={{ mb: 3 }}>
+            <CardContent className="terminal-card-content" sx={{ p: 0 }}>
+              <Box
+                className="terminal-container"
+                sx={{
+                  borderRadius: 2,
+                  overflow: "hidden",
+                }}
+              >
+                {/* Title bar */}
+                <Box
+                  className="terminal-title-bar"
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    px: 2,
+                    py: 0.8,
+                    bgcolor: "#2d2d2d",
+                    borderBottom: "1px solid #404040",
+                  }}
+                >
+                  <Box
+                    className="terminal-window-controls"
+                    sx={{ display: "flex", gap: 0.8, alignItems: "center" }}
+                  >
+                    <Box
+                      className="control-red"
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        bgcolor: "#ff5f57",
+                      }}
+                    />
+                    <Box
+                      className="control-yellow"
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        bgcolor: "#ffbd2e",
+                      }}
+                    />
+                    <Box
+                      className="control-green"
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        bgcolor: "#28c840",
+                      }}
+                    />
+                    <Box
+                      className="terminal-header-info"
+                      sx={{ display: "flex", alignItems: "center" }}
+                    >
+                      <TerminalIcon
+                        sx={{ ml: 1.5, fontSize: 16, color: "#999" }}
+                      />
+                      <Typography
+                        sx={{
+                          fontSize: 12,
+                          color: "#999",
+                          fontFamily: "'JetBrains Mono', monospace",
+                        }}
+                      >
+                        {server.username}@{server.host} — bash
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Button
+                    className="terminal-clear-btn"
+                    size="small"
+                    sx={{
+                      color: "#999",
+                      fontSize: 10,
+                      minWidth: 0,
+                      textTransform: "none",
+                    }}
+                    onClick={() => setTermOutput([])}
+                  >
+                    {t("serverDetail.clear")}
+                  </Button>
+                </Box>
+
+                {/* Terminal body */}
+                <Box
+                  className="terminal-body"
+                  ref={termRef}
+                  onClick={() => {
+                    const input = document.getElementById("term-input-field");
+                    input?.focus();
+                  }}
+                  sx={{
+                    bgcolor: "#0c0c0c",
+                    px: 1.5,
+                    py: 1,
+                    minHeight: 350,
+                    maxHeight: 550,
+                    overflow: "auto",
+                    fontFamily:
+                      "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
+                    fontSize: { xs: 11, sm: 13 },
+                    lineHeight: 1.5,
+                    cursor: "text",
+                    "&::-webkit-scrollbar": { width: 6 },
+                    "&::-webkit-scrollbar-track": { bgcolor: "transparent" },
+                    "&::-webkit-scrollbar-thumb": {
+                      bgcolor: "#333",
+                      borderRadius: 3,
                     },
                   }}
                 >
-                  <Box
-                    className="project-info"
-                    sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
-                  >
-                    <RocketLaunchIcon
-                      className="project-icon"
-                      sx={{ fontSize: 18, color: "primary.main" }}
-                    />
-                    <Box>
-                      <Typography
-                        className="project-name"
-                        variant="body2"
-                        fontWeight={600}
+                  {termOutput.length === 0 && !termLoading && (
+                    <>
+                      <Box
+                        className="terminal-welcome-msg"
+                        sx={{ color: "#5f5" }}
                       >
-                        {p.name}
-                      </Typography>
-                      <Typography
-                        className="project-details"
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ fontFamily: "'JetBrains Mono', monospace" }}
+                        {t("serverDetail.welcome", { name: server.name })} (
+                        {server.host})
+                      </Box>
+                      <Box
+                        className="terminal-welcome-sub"
+                        sx={{ color: "#888", mb: 1 }}
                       >
-                        {p.branch} → {p.deployPath}
-                      </Typography>
+                        {t("serverDetail.typeCommands")}
+                      </Box>
+                    </>
+                  )}
+
+                  {termOutput.map((entry, i) => (
+                    <Box
+                      key={i}
+                      className="terminal-output-line"
+                      sx={{ mb: 0.5 }}
+                    >
+                      <Box className="terminal-line-cmd">
+                        <span style={{ color: "#5f5" }}>{prompt}</span>{" "}
+                        <span style={{ color: "#fff" }}>{entry.command}</span>
+                      </Box>
+                      {entry.stdout && (
+                        <Box
+                          className="terminal-line-stdout"
+                          sx={{
+                            color: "#ccc",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-all",
+                          }}
+                        >
+                          {entry.stdout}
+                        </Box>
+                      )}
+                      {entry.stderr && (
+                        <Box
+                          className="terminal-line-stderr"
+                          sx={{
+                            color: "#f44",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-all",
+                          }}
+                        >
+                          {entry.stderr}
+                        </Box>
+                      )}
                     </Box>
-                  </Box>
-                  <Chip
-                    className="project-status-chip"
-                    label={p.status || "idle"}
-                    size="small"
-                    color={
-                      p.status === "running"
-                        ? "success"
-                        : p.status === "failed"
-                          ? "error"
-                          : "default"
-                    }
-                    variant="outlined"
-                    sx={{ fontSize: 11 }}
-                  />
+                  ))}
+
+                  {termLoading && (
+                    <Box
+                      className="terminal-loading-indicator"
+                      sx={{ color: "#888" }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
+                        <Skeleton variant="circular" width={10} height={10} />
+                        <span>{t("serverDetail.running")}</span>
+                      </Box>
+                    </Box>
+                  )}
+
+                  {!termLoading && (
+                    <Box
+                      className="terminal-input-line"
+                      sx={{ display: "flex", alignItems: "center" }}
+                    >
+                      <span
+                        className="terminal-prompt"
+                        style={{ color: "#5f5", whiteSpace: "nowrap" }}
+                      >
+                        {prompt}
+                      </span>
+                      &nbsp;
+                      <input
+                        id="term-input-field"
+                        className="terminal-input"
+                        value={termInput}
+                        onChange={(e) => setTermInput(e.target.value)}
+                        onKeyDown={async (e) => {
+                          if (e.key === "Enter") {
+                            await runCommand(termInput.trim());
+                          } else if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            if (termCmdHistory.length > 0) {
+                              const next = Math.min(
+                                termCmdIndex + 1,
+                                termCmdHistory.length - 1,
+                              );
+                              setTermCmdIndex(next);
+                              setTermInput(termCmdHistory[next]);
+                            }
+                          } else if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            if (termCmdIndex > 0) {
+                              const next = termCmdIndex - 1;
+                              setTermCmdIndex(next);
+                              setTermInput(termCmdHistory[next]);
+                            } else {
+                              setTermCmdIndex(-1);
+                              setTermInput("");
+                            }
+                          }
+                        }}
+                        disabled={termLoading}
+                        autoFocus
+                        style={{
+                          flex: 1,
+                          background: "transparent",
+                          border: "none",
+                          outline: "none",
+                          color: "#fff",
+                          fontFamily:
+                            "'JetBrains Mono', 'Cascadia Code', monospace",
+                          fontSize: "inherit",
+                          caretColor: "#5f5",
+                          padding: 0,
+                        }}
+                      />
+                    </Box>
+                  )}
                 </Box>
-              ))}
-            </Box>
-          </CardContent>
-        </Card>
+              </Box>
+            </CardContent>
+          </Card>
+
+          {/* Related Projects */}
+          {projects.length > 0 && (
+            <Card className="related-projects-card">
+              <CardContent className="projects-card-content" sx={{ p: 3 }}>
+                <Typography
+                  className="projects-title"
+                  variant="subtitle2"
+                  fontWeight={600}
+                  sx={{ mb: 2 }}
+                >
+                  <FolderIcon
+                    className="projects-icon"
+                    sx={{ fontSize: 18, mr: 1, verticalAlign: "text-bottom" }}
+                  />
+                  {t("serverDetail.projectsOnServer")} ({projects.length})
+                </Typography>
+                <Box
+                  className="projects-list"
+                  sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                >
+                  {projects.map((p) => (
+                    <Box
+                      key={p._id}
+                      className="project-item"
+                      onClick={() => navigate(`/projects/${p._id}/deploy`)}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        p: 1.5,
+                        borderRadius: 2,
+                        bgcolor: "rgba(255,255,255,0.02)",
+                        border: "1px solid rgba(255,255,255,0.06)",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                        "&:hover": {
+                          bgcolor: "rgba(255,255,255,0.04)",
+                          transform: "translateX(4px)",
+                        },
+                      }}
+                    >
+                      <Box
+                        className="project-info"
+                        sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                      >
+                        <RocketLaunchIcon
+                          className="project-icon"
+                          sx={{ fontSize: 18, color: "primary.main" }}
+                        />
+                        <Box>
+                          <Typography
+                            className="project-name"
+                            variant="body2"
+                            fontWeight={600}
+                          >
+                            {p.name}
+                          </Typography>
+                          <Typography
+                            className="project-details"
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ fontFamily: "'JetBrains Mono', monospace" }}
+                          >
+                            {p.branch} → {p.deployPath}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Chip
+                        className="project-status-chip"
+                        label={p.status || "idle"}
+                        size="small"
+                        color={
+                          p.status === "running"
+                            ? "success"
+                            : p.status === "failed"
+                              ? "error"
+                              : "default"
+                        }
+                        variant="outlined"
+                        sx={{ fontSize: 11 }}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
+
+      {/* Time Machine Tab */}
+      {currentTab === 1 && <ServerTimeMachine serverId={server._id} />}
 
       {/* Edit Dialog */}
       <Dialog
