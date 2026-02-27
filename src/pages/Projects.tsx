@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
@@ -92,6 +92,7 @@ const SortableProjectGridItem = memo(function SortableProjectGridItem({
 
 const Projects: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { t } = useTranslation();
@@ -100,6 +101,17 @@ const Projects: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
+
+  // Check URL params for ?add=true from Command Palette
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("add") === "true") {
+      setEditing(null);
+      setShowModal(true);
+      // Clean up the URL
+      navigate("/projects", { replace: true });
+    }
+  }, [location.search, navigate]);
   const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
   const [deletePassword, setDeletePassword] = useState("");
   const [confirmStop, setConfirmStop] = useState<Project | null>(null);

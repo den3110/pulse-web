@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
@@ -22,12 +22,15 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Tooltip,
   CircularProgress,
   Tabs,
   Tab,
+  Drawer,
+  Tooltip,
+  useTheme,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import CloseIcon from "@mui/icons-material/Close";
 import DnsIcon from "@mui/icons-material/Dns";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -38,6 +41,11 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import SEO from "../components/SEO";
 import { ServerTimeMachine } from "../components/ServerTimeMachine";
+import { ServerSecurity } from "../components/ServerSecurity";
+import { Terminal } from "xterm";
+import { FitAddon } from "xterm-addon-fit";
+import "xterm/css/xterm.css";
+import { getSocket } from "../services/socket";
 
 interface Server {
   _id: string;
@@ -73,6 +81,7 @@ const ServerDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const theme = useTheme();
 
   const [server, setServer] = useState<Server | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,7 +89,22 @@ const ServerDetail: React.FC = () => {
   const [statsLoading, setStatsLoading] = useState(false);
   const [projects, setProjects] = useState<RelatedProject[]>([]);
   const [testing, setTesting] = useState(false);
-  const [currentTab, setCurrentTab] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+
+  const tabMapping: Record<string, number> = {
+    overview: 0,
+    "time-machine": 1,
+    security: 2,
+  };
+  const reverseTabMapping = ["overview", "time-machine", "security"];
+
+  const currentTab =
+    tabParam && tabMapping[tabParam] !== undefined ? tabMapping[tabParam] : 0;
+
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
+    setSearchParams({ tab: reverseTabMapping[newValue] });
+  };
 
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false);
@@ -98,22 +122,18 @@ const ServerDetail: React.FC = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Terminal state
-  const [termInput, setTermInput] = useState("");
-  const [termLoading, setTermLoading] = useState(false);
-  const [termOutput, setTermOutput] = useState<
-    { command: string; stdout: string; stderr: string; code: number }[]
-  >([]);
-  const [termCmdHistory, setTermCmdHistory] = useState<string[]>([]);
-  const [termCmdIndex, setTermCmdIndex] = useState(-1);
-  const [termCwd, setTermCwd] = useState("~");
   const termRef = useRef<HTMLDivElement>(null);
+  const xtermRef = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+  const termIdRef = useRef<number>(Date.now());
+  const socketConnectedRef = useRef(false);
 
   const fetchServer = async () => {
     try {
       const { data } = await api.get(`/servers/${id}`);
       setServer(data);
     } catch {
-      toast.error("Server not found");
+      toast.error(t("servers.notFound"));
       navigate("/servers");
     } finally {
       setLoading(false);
@@ -126,12 +146,12 @@ const ServerDetail: React.FC = () => {
       const { data } = await api.get(`/servers/${id}/stats`);
       setStats(data.stats);
     } catch {
-      toast.error("Failed to fetch stats");
+      toast.error(t("serverDetail.noStats"));
     } finally {
       setStatsLoading(false);
     }
   };
-  console.log(stats);
+  console.log(stats)
 
   const fetchProjects = async () => {
     try {
@@ -147,13 +167,13 @@ const ServerDetail: React.FC = () => {
     try {
       const { data } = await api.post(`/servers/${id}/test`);
       if (data.success) {
-        toast.success("Connection successful!");
+        toast.success(t("servers.testSuccess"));
         fetchServer();
       } else {
-        toast.error(`Connection failed: ${data.message}`);
+        toast.error(`${t("servers.testFailed")} ${data.message}`);
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Test failed");
+      toast.error(err.response?.data?.message || t("servers.testError"));
     } finally {
       setTesting(false);
     }
@@ -163,21 +183,21 @@ const ServerDetail: React.FC = () => {
     e.preventDefault();
     try {
       await api.put(`/servers/${id}`, editForm);
-      toast.success("Server updated!");
+      toast.success(t("servers.updated"));
       setEditOpen(false);
       fetchServer();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Update failed");
+      toast.error(err.response?.data?.message || t("servers.updateFailed"));
     }
   };
 
   const handleDelete = async () => {
     try {
       await api.delete(`/servers/${id}`);
-      toast.success("Server deleted!");
+      toast.success(t("servers.deleted"));
       navigate("/servers");
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Delete failed");
+      toast.error(err.response?.data?.message || t("servers.deleteFailed"));
     }
   };
 
@@ -195,53 +215,203 @@ const ServerDetail: React.FC = () => {
     setEditOpen(true);
   };
 
-  const parsePercent = (s: string) => parseFloat(s) || 0;
-
-  const runCommand = async (cmd: string) => {
-    if (!cmd || termLoading) return;
-    setTermInput("");
-    setTermLoading(true);
-    setTermCmdHistory((prev) => [cmd, ...prev]);
-    setTermCmdIndex(-1);
-    const wrappedCmd =
-      termCwd === "~" ? `${cmd} && pwd` : `cd ${termCwd} && ${cmd} && pwd`;
-    try {
-      const { data } = await api.post(`/servers/${id}/exec`, {
-        command: wrappedCmd,
-      });
-      const lines = (data.stdout || "").split("\n");
-      const newCwd = lines.pop()?.trim() || termCwd;
-      const displayStdout = lines.join("\n").trim();
-      if (data.code === 0 || data.code == null) {
-        setTermCwd(newCwd);
-      }
-      setTermOutput((prev) => [
-        ...prev,
-        {
-          command: cmd,
-          stdout: displayStdout,
-          stderr: data.stderr || "",
-          code: data.code ?? 0,
-        },
-      ]);
-    } catch (err: any) {
-      setTermOutput((prev) => [
-        ...prev,
-        {
-          command: cmd,
-          stdout: "",
-          stderr: err.response?.data?.message || "Connection failed",
-          code: 1,
-        },
-      ]);
-    } finally {
-      setTermLoading(false);
-      setTimeout(
-        () => termRef.current?.scrollTo(0, termRef.current.scrollHeight),
-        50,
-      );
-    }
+  const parsePercent = (s: string | undefined | null) => {
+    if (!s) return 0;
+    return parseFloat(s) || 0;
   };
+
+  // Sync xterm theme when React Material UI theme changes
+  useEffect(() => {
+    if (xtermRef.current) {
+      const isDark = theme.palette.mode === "dark";
+      xtermRef.current.options.theme = {
+        background: theme.palette.background.paper,
+        foreground: theme.palette.text.primary,
+        cursor: theme.palette.primary.main,
+        selectionBackground: theme.palette.primary.light,
+        black: isDark ? "#000000" : "#ffffff",
+        red: isDark ? "#cd3131" : "#cd3131",
+        green: isDark ? "#0dbc79" : "#008000",
+        yellow: isDark ? "#e5e510" : "#b58900",
+        blue: isDark ? "#2472c8" : "#268bd2",
+        magenta: isDark ? "#bc3fbc" : "#d33682",
+        cyan: isDark ? "#11a8cd" : "#2aa198",
+        white: isDark ? "#e5e5e5" : "#000000",
+        brightBlack: isDark ? "#666666" : "#808080",
+        brightRed: isDark ? "#f14c4c" : "#cb4b16",
+        brightGreen: isDark ? "#23d18b" : "#586e75",
+        brightYellow: isDark ? "#f5f543" : "#657b83",
+        brightBlue: isDark ? "#3b8eea" : "#839496",
+        brightMagenta: isDark ? "#d670d6" : "#6c71c4",
+        brightCyan: isDark ? "#29b8db" : "#93a1a1",
+        brightWhite: isDark ? "#e5e5e5" : "#073642",
+      };
+    }
+  }, [
+    theme.palette.mode,
+    theme.palette.background.paper,
+    theme.palette.text.primary,
+    theme.palette.primary.main,
+    theme.palette.primary.light,
+  ]);
+
+  useEffect(() => {
+    if (!server || !termRef.current || currentTab !== 0) return;
+
+    if (!xtermRef.current) {
+      const isDark = theme.palette.mode === "dark";
+      const xterm = new Terminal({
+        cursorBlink: true,
+        fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
+        fontSize: 13,
+        theme: {
+          background: theme.palette.background.paper,
+          foreground: theme.palette.text.primary,
+          cursor: theme.palette.primary.main,
+          selectionBackground: theme.palette.primary.light,
+          black: isDark ? "#000000" : "#ffffff",
+          red: isDark ? "#cd3131" : "#cd3131",
+          green: isDark ? "#0dbc79" : "#008000",
+          yellow: isDark ? "#e5e510" : "#b58900",
+          blue: isDark ? "#2472c8" : "#268bd2",
+          magenta: isDark ? "#bc3fbc" : "#d33682",
+          cyan: isDark ? "#11a8cd" : "#2aa198",
+          white: isDark ? "#e5e5e5" : "#000000",
+          brightBlack: isDark ? "#666666" : "#808080",
+          brightRed: isDark ? "#f14c4c" : "#cb4b16",
+          brightGreen: isDark ? "#23d18b" : "#586e75",
+          brightYellow: isDark ? "#f5f543" : "#657b83",
+          brightBlue: isDark ? "#3b8eea" : "#839496",
+          brightMagenta: isDark ? "#d670d6" : "#6c71c4",
+          brightCyan: isDark ? "#29b8db" : "#93a1a1",
+          brightWhite: isDark ? "#e5e5e5" : "#073642",
+        },
+      });
+      const fitAddon = new FitAddon();
+      xterm.loadAddon(fitAddon);
+      xterm.open(termRef.current);
+
+      setTimeout(() => {
+        fitAddon.fit();
+      }, 50);
+
+      xtermRef.current = xterm;
+      fitAddonRef.current = fitAddon;
+
+      const socket = getSocket();
+      if (socket) {
+        socketConnectedRef.current = true;
+        socket.emit("join:server", server._id);
+
+        const termId = termIdRef.current;
+
+        xterm.onData((data) => {
+          socket.emit("terminal:data", { termId, data });
+        });
+
+        xterm.onResize((size) => {
+          socket.emit("terminal:resize", {
+            termId,
+            rows: size.rows,
+            cols: size.cols,
+          });
+        });
+
+        const handleOutput = (data: { termId: number; data: string }) => {
+          if (data.termId === termId) {
+            xterm.write(data.data);
+          }
+        };
+
+        const handleExit = (data: { termId: number }) => {
+          if (data.termId === termId) {
+            xterm.write("\r\n\x1b[33m[Connection Closed]\x1b[0m\r\n");
+          }
+        };
+
+        socket.on("terminal:output", handleOutput);
+        socket.on("terminal:exit", handleExit);
+
+        // --- Add Copy/Paste Keyboard Handlers ---
+        xterm.attachCustomKeyEventHandler((arg) => {
+          if (arg.ctrlKey && arg.type === "keydown") {
+            // Ctrl + C (Copy)
+            if (arg.code === "KeyC" && xterm.hasSelection()) {
+              navigator.clipboard.writeText(xterm.getSelection());
+              return false;
+            }
+            // Ctrl + V (Paste)
+            if (arg.code === "KeyV") {
+              navigator.clipboard.readText().then((text) => {
+                socket.emit("terminal:data", { termId, data: text });
+              });
+              return false;
+            }
+          }
+          return true; // Let xterm handle everything else
+        });
+
+        // Add Right-click to Paste
+        const handleContextMenu = async (e: Event) => {
+          e.preventDefault();
+          if (xterm.hasSelection()) {
+            // If they have text selected, right click copies it
+            navigator.clipboard.writeText(xterm.getSelection());
+            xterm.clearSelection();
+          } else {
+            // If nothing is selected, right click pastes
+            try {
+              const text = await navigator.clipboard.readText();
+              socket.emit("terminal:data", { termId, data: text });
+            } catch (err) {
+              console.error("Failed to read clipboard:", err);
+            }
+          }
+        };
+
+        // We have to attach after a tiny delay so the DOM element is rendered
+        setTimeout(() => {
+          if (termRef.current) {
+            const terminalEl = termRef.current.querySelector(".xterm");
+            if (terminalEl) {
+              terminalEl.addEventListener(
+                "contextmenu",
+                handleContextMenu as EventListener,
+              );
+            }
+          }
+        }, 100);
+
+        // Start session
+        socket.emit("terminal:start", {
+          serverId: server._id,
+          termId,
+          rows: xterm.rows,
+          cols: xterm.cols,
+        });
+
+        return () => {
+          socket.off("terminal:output", handleOutput);
+          socket.off("terminal:exit", handleExit);
+          socket.emit("terminal:close", { termId });
+          xterm.dispose();
+          xtermRef.current = null;
+        };
+      }
+    }
+
+    const handleResize = () => {
+      if (fitAddonRef.current) {
+        try {
+          fitAddonRef.current.fit();
+        } catch {
+          /* ignore if already disposed */
+        }
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [server, currentTab]);
 
   useEffect(() => {
     fetchServer();
@@ -293,8 +463,6 @@ const ServerDetail: React.FC = () => {
   }
 
   if (!server) return null;
-
-  const prompt = `${server.username}@${server.host}:${termCwd}#`;
 
   return (
     <Box className="server-detail-page">
@@ -398,13 +566,14 @@ const ServerDetail: React.FC = () => {
       <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
         <Tabs
           value={currentTab}
-          onChange={(_, newValue) => setCurrentTab(newValue)}
+          onChange={handleTabChange}
           aria-label="server detail tabs"
           textColor="primary"
           indicatorColor="primary"
         >
           <Tab label="Overview & Terminal" />
           <Tab label="Time Machine" />
+          <Tab label={t("security.tabTitle", "Security & Compliance")} />
         </Tabs>
       </Box>
 
@@ -691,8 +860,12 @@ const ServerDetail: React.FC = () => {
                     justifyContent: "space-between",
                     px: 2,
                     py: 0.8,
-                    bgcolor: "#2d2d2d",
-                    borderBottom: "1px solid #404040",
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "#2d2d2d"
+                        : theme.palette.grey[200],
+                    borderBottom: 1,
+                    borderColor: "divider",
                   }}
                 >
                   <Box
@@ -731,12 +904,16 @@ const ServerDetail: React.FC = () => {
                       sx={{ display: "flex", alignItems: "center" }}
                     >
                       <TerminalIcon
-                        sx={{ ml: 1.5, fontSize: 16, color: "#999" }}
+                        sx={{
+                          ml: 1.5,
+                          fontSize: 16,
+                          color: theme.palette.text.secondary,
+                        }}
                       />
                       <Typography
                         sx={{
                           fontSize: 12,
-                          color: "#999",
+                          color: theme.palette.text.secondary,
                           fontFamily: "'JetBrains Mono', monospace",
                         }}
                       >
@@ -748,12 +925,12 @@ const ServerDetail: React.FC = () => {
                     className="terminal-clear-btn"
                     size="small"
                     sx={{
-                      color: "#999",
+                      color: theme.palette.text.secondary,
                       fontSize: 10,
                       minWidth: 0,
                       textTransform: "none",
                     }}
-                    onClick={() => setTermOutput([])}
+                    onClick={() => xtermRef.current?.clear()}
                   >
                     {t("serverDetail.clear")}
                   </Button>
@@ -763,163 +940,25 @@ const ServerDetail: React.FC = () => {
                 <Box
                   className="terminal-body"
                   ref={termRef}
-                  onClick={() => {
-                    const input = document.getElementById("term-input-field");
-                    input?.focus();
-                  }}
                   sx={{
-                    bgcolor: "#0c0c0c",
+                    bgcolor: theme.palette.background.paper,
                     px: 1.5,
                     py: 1,
-                    minHeight: 350,
-                    maxHeight: 550,
-                    overflow: "auto",
-                    fontFamily:
-                      "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
-                    fontSize: { xs: 11, sm: 13 },
-                    lineHeight: 1.5,
-                    cursor: "text",
-                    "&::-webkit-scrollbar": { width: 6 },
-                    "&::-webkit-scrollbar-track": { bgcolor: "transparent" },
-                    "&::-webkit-scrollbar-thumb": {
-                      bgcolor: "#333",
-                      borderRadius: 3,
+                    height: 550,
+                    overflow: "hidden",
+                    ".xterm-viewport": {
+                      "&::-webkit-scrollbar": { width: 6 },
+                      "&::-webkit-scrollbar-track": { bgcolor: "transparent" },
+                      "&::-webkit-scrollbar-thumb": {
+                        bgcolor:
+                          theme.palette.mode === "dark"
+                            ? "#333"
+                            : theme.palette.grey[400],
+                        borderRadius: 3,
+                      },
                     },
                   }}
-                >
-                  {termOutput.length === 0 && !termLoading && (
-                    <>
-                      <Box
-                        className="terminal-welcome-msg"
-                        sx={{ color: "#5f5" }}
-                      >
-                        {t("serverDetail.welcome", { name: server.name })} (
-                        {server.host})
-                      </Box>
-                      <Box
-                        className="terminal-welcome-sub"
-                        sx={{ color: "#888", mb: 1 }}
-                      >
-                        {t("serverDetail.typeCommands")}
-                      </Box>
-                    </>
-                  )}
-
-                  {termOutput.map((entry, i) => (
-                    <Box
-                      key={i}
-                      className="terminal-output-line"
-                      sx={{ mb: 0.5 }}
-                    >
-                      <Box className="terminal-line-cmd">
-                        <span style={{ color: "#5f5" }}>{prompt}</span>{" "}
-                        <span style={{ color: "#fff" }}>{entry.command}</span>
-                      </Box>
-                      {entry.stdout && (
-                        <Box
-                          className="terminal-line-stdout"
-                          sx={{
-                            color: "#ccc",
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-all",
-                          }}
-                        >
-                          {entry.stdout}
-                        </Box>
-                      )}
-                      {entry.stderr && (
-                        <Box
-                          className="terminal-line-stderr"
-                          sx={{
-                            color: "#f44",
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-all",
-                          }}
-                        >
-                          {entry.stderr}
-                        </Box>
-                      )}
-                    </Box>
-                  ))}
-
-                  {termLoading && (
-                    <Box
-                      className="terminal-loading-indicator"
-                      sx={{ color: "#888" }}
-                    >
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                        }}
-                      >
-                        <Skeleton variant="circular" width={10} height={10} />
-                        <span>{t("serverDetail.running")}</span>
-                      </Box>
-                    </Box>
-                  )}
-
-                  {!termLoading && (
-                    <Box
-                      className="terminal-input-line"
-                      sx={{ display: "flex", alignItems: "center" }}
-                    >
-                      <span
-                        className="terminal-prompt"
-                        style={{ color: "#5f5", whiteSpace: "nowrap" }}
-                      >
-                        {prompt}
-                      </span>
-                      &nbsp;
-                      <input
-                        id="term-input-field"
-                        className="terminal-input"
-                        value={termInput}
-                        onChange={(e) => setTermInput(e.target.value)}
-                        onKeyDown={async (e) => {
-                          if (e.key === "Enter") {
-                            await runCommand(termInput.trim());
-                          } else if (e.key === "ArrowUp") {
-                            e.preventDefault();
-                            if (termCmdHistory.length > 0) {
-                              const next = Math.min(
-                                termCmdIndex + 1,
-                                termCmdHistory.length - 1,
-                              );
-                              setTermCmdIndex(next);
-                              setTermInput(termCmdHistory[next]);
-                            }
-                          } else if (e.key === "ArrowDown") {
-                            e.preventDefault();
-                            if (termCmdIndex > 0) {
-                              const next = termCmdIndex - 1;
-                              setTermCmdIndex(next);
-                              setTermInput(termCmdHistory[next]);
-                            } else {
-                              setTermCmdIndex(-1);
-                              setTermInput("");
-                            }
-                          }
-                        }}
-                        disabled={termLoading}
-                        autoFocus
-                        style={{
-                          flex: 1,
-                          background: "transparent",
-                          border: "none",
-                          outline: "none",
-                          color: "#fff",
-                          fontFamily:
-                            "'JetBrains Mono', 'Cascadia Code', monospace",
-                          fontSize: "inherit",
-                          caretColor: "#5f5",
-                          padding: 0,
-                        }}
-                      />
-                    </Box>
-                  )}
-                </Box>
+                />
               </Box>
             </CardContent>
           </Card>
@@ -1017,22 +1056,46 @@ const ServerDetail: React.FC = () => {
       {/* Time Machine Tab */}
       {currentTab === 1 && <ServerTimeMachine serverId={server._id} />}
 
-      {/* Edit Dialog */}
-      <Dialog
-        className="edit-server-dialog"
+      {/* Security Tab */}
+      {currentTab === 2 && <ServerSecurity serverId={server._id} />}
+
+      {/* Edit Drawer */}
+      <Drawer
+        anchor="right"
+        className="edit-server-drawer"
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        maxWidth="sm"
-        fullWidth
+        PaperProps={{
+          sx: { width: { xs: "100%", sm: 500 } },
+        }}
       >
-        <form className="edit-server-form" onSubmit={handleEdit}>
-          <DialogTitle className="edit-server-title">
+        <Box
+          sx={{
+            p: 3,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            borderBottom: 1,
+            borderColor: "divider",
+          }}
+        >
+          <Typography variant="h6" className="edit-server-title">
             {t("servers.editServer")}
-          </DialogTitle>
-          <DialogContent className="edit-server-content">
-            <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}
-            >
+          </Typography>
+          <IconButton onClick={() => setEditOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <form
+          className="edit-server-form"
+          onSubmit={handleEdit}
+          style={{ display: "flex", flexDirection: "column", height: "100%" }}
+        >
+          <Box
+            className="edit-server-content"
+            sx={{ p: 3, flexGrow: 1, overflowY: "auto" }}
+          >
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
               <TextField
                 className="field-name"
                 label={t("common.name")}
@@ -1062,6 +1125,15 @@ const ServerDetail: React.FC = () => {
                   setEditForm({ ...editForm, port: Number(e.target.value) })
                 }
                 fullWidth
+                sx={{
+                  "& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button":
+                    {
+                      display: "none",
+                    },
+                  "& input[type=number]": {
+                    MozAppearance: "textfield",
+                  },
+                }}
               />
               <TextField
                 className="field-username"
@@ -1116,17 +1188,27 @@ const ServerDetail: React.FC = () => {
                 />
               )}
             </Box>
-          </DialogContent>
-          <DialogActions className="edit-server-actions">
+          </Box>
+          <Box
+            className="edit-server-actions"
+            sx={{
+              p: 3,
+              borderTop: 1,
+              borderColor: "divider",
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 2,
+            }}
+          >
             <Button onClick={() => setEditOpen(false)}>
               {t("common.cancel")}
             </Button>
             <Button type="submit" variant="contained">
               {t("common.save")}
             </Button>
-          </DialogActions>
+          </Box>
         </form>
-      </Dialog>
+      </Drawer>
 
       {/* Delete Dialog */}
       <Dialog
@@ -1138,7 +1220,9 @@ const ServerDetail: React.FC = () => {
           {t("servers.deleteServer")}
         </DialogTitle>
         <DialogContent className="delete-server-content">
-          <Typography>{t("servers.confirmDelete")}</Typography>
+          <Typography>
+            {t("servers.confirmDelete", { name: server?.name })}
+          </Typography>
         </DialogContent>
         <DialogActions className="delete-server-actions">
           <Button onClick={() => setDeleteOpen(false)}>

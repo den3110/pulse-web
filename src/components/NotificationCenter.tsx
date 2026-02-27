@@ -217,7 +217,7 @@ const NotificationCenter: React.FC = () => {
                       cursor: "pointer",
                       bgcolor: n.read
                         ? "transparent"
-                        : "rgba(99, 102, 241, 0.06)",
+                        : "var(--primary-main-06)",
                       transition: "all 0.15s ease",
                       "&:hover": {
                         bgcolor: "rgba(255,255,255,0.04)",

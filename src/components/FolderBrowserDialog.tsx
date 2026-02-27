@@ -207,7 +207,7 @@ const FolderBrowserDialog: React.FC<FolderBrowserDialogProps> = ({
                 sx={{
                   borderRadius: 1.5,
                   mb: 0.5,
-                  "&:hover": { bgcolor: "rgba(99, 102, 241, 0.1)" },
+                  "&:hover": { bgcolor: "var(--primary-main-10)" },
                 }}
               >
                 <ListItemIcon sx={{ minWidth: 36 }}>

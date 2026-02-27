@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Box } from "@mui/material";
+import { Box, useTheme } from "@mui/material";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
@@ -19,6 +19,7 @@ const RemoteTerminal: React.FC<RemoteTerminalProps> = ({
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const theme = useTheme();
   // Ensure socket is available
   const socket = getSocket() || connectSocket();
 
@@ -30,6 +31,7 @@ const RemoteTerminal: React.FC<RemoteTerminalProps> = ({
       xtermRef.current.dispose();
     }
 
+    const isDark = theme.palette.mode === "dark";
     const term = new Terminal({
       cursorBlink: true,
       fontFamily:
@@ -38,26 +40,26 @@ const RemoteTerminal: React.FC<RemoteTerminalProps> = ({
       lineHeight: 1.2,
       letterSpacing: 0,
       theme: {
-        background: "#1e1e1e",
-        foreground: "#d4d4d4",
-        cursor: "#a7a7a7",
-        selectionBackground: "rgba(255, 255, 255, 0.2)",
-        black: "#000000",
-        red: "#cd3131",
-        green: "#0dbc79",
-        yellow: "#e5e510",
-        blue: "#2472c8",
-        magenta: "#bc3fbc",
-        cyan: "#11a8cd",
-        white: "#e5e5e5",
-        brightBlack: "#666666",
-        brightRed: "#f14c4c",
-        brightGreen: "#23d18b",
-        brightYellow: "#f5f543",
-        brightBlue: "#3b8eea",
-        brightMagenta: "#d670d6",
-        brightCyan: "#29b8db",
-        brightWhite: "#e5e5e5",
+        background: theme.palette.background.paper,
+        foreground: theme.palette.text.primary,
+        cursor: theme.palette.primary.main,
+        selectionBackground: theme.palette.primary.light,
+        black: isDark ? "#000000" : "#ffffff",
+        red: isDark ? "#cd3131" : "#cd3131",
+        green: isDark ? "#0dbc79" : "#008000",
+        yellow: isDark ? "#e5e510" : "#b58900",
+        blue: isDark ? "#2472c8" : "#268bd2",
+        magenta: isDark ? "#bc3fbc" : "#d33682",
+        cyan: isDark ? "#11a8cd" : "#2aa198",
+        white: isDark ? "#e5e5e5" : "#000000",
+        brightBlack: isDark ? "#666666" : "#808080",
+        brightRed: isDark ? "#f14c4c" : "#cb4b16",
+        brightGreen: isDark ? "#23d18b" : "#586e75",
+        brightYellow: isDark ? "#f5f543" : "#657b83",
+        brightBlue: isDark ? "#3b8eea" : "#839496",
+        brightMagenta: isDark ? "#d670d6" : "#6c71c4",
+        brightCyan: isDark ? "#29b8db" : "#93a1a1",
+        brightWhite: isDark ? "#e5e5e5" : "#073642",
       },
       allowProposedApi: true,
       overviewRulerWidth: 8,
@@ -156,6 +158,41 @@ const RemoteTerminal: React.FC<RemoteTerminalProps> = ({
   // If we change path of a tab? Usage shows path is part of session creation.
   // So likely fine.
 
+  // Sync xterm theme when React Material UI theme changes
+  useEffect(() => {
+    if (xtermRef.current) {
+      const isDark = theme.palette.mode === "dark";
+      xtermRef.current.options.theme = {
+        background: theme.palette.background.paper,
+        foreground: theme.palette.text.primary,
+        cursor: theme.palette.primary.main,
+        selectionBackground: theme.palette.primary.light,
+        black: isDark ? "#000000" : "#ffffff",
+        red: isDark ? "#cd3131" : "#cd3131",
+        green: isDark ? "#0dbc79" : "#008000",
+        yellow: isDark ? "#e5e510" : "#b58900",
+        blue: isDark ? "#2472c8" : "#268bd2",
+        magenta: isDark ? "#bc3fbc" : "#d33682",
+        cyan: isDark ? "#11a8cd" : "#2aa198",
+        white: isDark ? "#e5e5e5" : "#000000",
+        brightBlack: isDark ? "#666666" : "#808080",
+        brightRed: isDark ? "#f14c4c" : "#cb4b16",
+        brightGreen: isDark ? "#23d18b" : "#586e75",
+        brightYellow: isDark ? "#f5f543" : "#657b83",
+        brightBlue: isDark ? "#3b8eea" : "#839496",
+        brightMagenta: isDark ? "#d670d6" : "#6c71c4",
+        brightCyan: isDark ? "#29b8db" : "#93a1a1",
+        brightWhite: isDark ? "#e5e5e5" : "#073642",
+      };
+    }
+  }, [
+    theme.palette.mode,
+    theme.palette.background.paper,
+    theme.palette.text.primary,
+    theme.palette.primary.main,
+    theme.palette.primary.light,
+  ]);
+
   // ResizeObserver for container resize (e.g. opening/closing drawer)
   useEffect(() => {
     const elem = terminalRef.current;
@@ -179,7 +216,7 @@ const RemoteTerminal: React.FC<RemoteTerminalProps> = ({
       sx={{
         height: "100%",
         width: "100%",
-        bgcolor: "#1e1e1e",
+        bgcolor: "background.paper",
         pl: 1, // Add internal padding
         pb: 1,
         "& .xterm-viewport": {
@@ -189,17 +226,17 @@ const RemoteTerminal: React.FC<RemoteTerminalProps> = ({
             height: "8px",
           },
           "&::-webkit-scrollbar-track": {
-            background: "#1e1e1e",
+            background: "background.paper",
           },
           "&::-webkit-scrollbar-thumb": {
-            background: "#424242",
+            background: theme.palette.mode === "dark" ? "#424242" : "#c1c1c1",
             borderRadius: "4px",
             "&:hover": {
-              background: "#555",
+              background: theme.palette.mode === "dark" ? "#555" : "#a8a8a8",
             },
           },
           "&::-webkit-scrollbar-corner": {
-            background: "#1e1e1e",
+            background: "background.paper",
           },
         },
         "& .xterm-screen": {

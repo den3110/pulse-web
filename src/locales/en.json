@@ -1,6 +1,7 @@
 {
   "nav": {
     "dashboard": "Dashboard",
+    "docs": "Docs",
     "servers": "Servers",
     "projects": "Projects",
     "nginx": "Nginx",
@@ -11,18 +12,38 @@
     "users": "Users",
     "settings": "Settings",
     "database": "Database",
-    "ports": "Ports"
+    "ports": "Ports",
+    "docker": "Docker",
+    "infrastructure": "Infra Map",
+    "analytics": "Analytics",
+    "bandwidth": "Bandwidth",
+    "approvals": "Approvals",
+    "secrets": "Secrets",
+    "webhookDebug": "Webhooks",
+    "testRunner": "Test Runner",
+    "pipelines": "Pipelines",
+    "vpn": "VPN Server",
+    "logs": "Log Studio"
   },
   "seo": {
     "defaultDescription": "Pulse - Manage your Git deployments on VPS servers with ease.",
     "defaultKeywords": "deploy, git, vps, manager, ssh, pm2, nginx, docker",
-    "login": { "title": "Login", "description": "Login to your account" },
-    "register": { "title": "Register", "description": "Create a new account" },
+    "login": {
+      "title": "Login",
+      "description": "Login to your account"
+    },
+    "register": {
+      "title": "Register",
+      "description": "Create a new account"
+    },
     "dashboard": {
       "title": "Dashboard",
       "description": "View your deployment overview"
     },
-    "servers": { "title": "Servers", "description": "Manage your VPS servers" },
+    "servers": {
+      "title": "Servers",
+      "description": "Manage your VPS servers"
+    },
     "projects": {
       "title": "Projects",
       "description": "Manage your Git projects"
@@ -35,8 +56,14 @@
       "title": "Settings",
       "description": "Manage system settings"
     },
-    "users": { "title": "Users", "description": "Manage users and roles" },
-    "notFound": { "title": "404 Not Found", "description": "Page not found" }
+    "users": {
+      "title": "Users",
+      "description": "Manage users and roles"
+    },
+    "notFound": {
+      "title": "404 Not Found",
+      "description": "Page not found"
+    }
   },
   "database": {
     "title": "Database Manager",
@@ -52,7 +79,13 @@
     "dbName": "Database Name",
     "dbUser": "Username",
     "dbPassword": "Password",
-    "startBackup": "Start Backup"
+    "startBackup": "Start Backup",
+    "fetchFailed": "Failed to fetch containers",
+    "backupCreated": "Backup created at",
+    "backupFailed": "Backup failed",
+    "restoreSuccess": "Restore completed",
+    "containers": "Containers",
+    "backups": "Backups"
   },
   "common": {
     "add": "Add",
@@ -105,13 +138,20 @@
     "more": "More",
     "saving": "Saving...",
     "reorderFailed": "Failed to reorder items",
-    "project": "Project"
+    "project": "Project",
+    "username": "Username",
+    "email": "Email",
+    "noResultsFound": "No results found for",
+    "selectServer": "Please select a server to view ports.",
+    "confirmDelete": "Are you sure?",
+    "autoRefresh": "Auto-refresh"
   },
   "auth": {
     "login": "Login",
     "logout": "Logout",
     "logoutConfirm": "Are you sure you want to logout?",
     "username": "Username",
+    "email": "Email",
     "password": "Password",
     "confirmPassword": "Confirm Password",
     "emailOrUsername": "Email or Username",
@@ -126,7 +166,11 @@
     "passwordMismatch": "Passwords don't match",
     "passwordTooShort": "Password must be at least 6 characters",
     "noAccount": "Don't have an account?",
-    "haveAccount": "Already have an account?"
+    "haveAccount": "Already have an account?",
+    "twoFactorVerification": "Two-Factor Authentication",
+    "enterTwoFactorCode": "Enter the 6-digit code from your authenticator app.",
+    "twoFactorCode": "Authenticator Code",
+    "verify": "Verify Code"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -161,13 +205,16 @@
     "paste": "Paste",
     "clipboardError": "Failed to read clipboard",
     "serverInfo": "Server Info",
+    "notFound": "Server not found",
     "updated": "Server updated successfully!",
+    "updateFailed": "Update failed",
     "added": "Server added successfully!",
     "deleted": "Server deleted!",
     "reorderFailed": "Failed to reorder servers",
     "deleteFailed": "Failed to delete server",
     "testSuccess": "Connection successful! 🎉",
     "testFailed": "Connection failed:",
+    "testError": "Test failed",
     "statsFailed": "Failed to get stats:",
     "host": "Host",
     "port": "Port",
@@ -199,7 +246,10 @@
     "dashboard": "Dashboard",
     "username": "Username",
     "password": "Password",
-    "privateKey": "Private Key"
+    "privateKey": "Private Key",
+    "add": "Add Server",
+    "connecting": "Connecting...",
+    "addAndConnect": "Add & Connect"
   },
   "users": {
     "title": "User Management",
@@ -282,7 +332,6 @@
     "noBranchesFound": "No branches found",
     "noReposFound": "No repositories found. Ensure you have connected GitHub in Settings.",
     "noMatchingRepos": "No matching repositories found. Try checking your search query.",
-
     "addVar": "Add Variable",
     "noEnvVars": "No environment variables configured",
     "autoDeployLabel": "Auto-deploy on new commits",
@@ -298,7 +347,25 @@
     "deployPath": "Deploy Path",
     "autoDeploy": "Auto Deploy",
     "commands": "Commands",
-    "envVars": "Environment Variables"
+    "envVars": "Environment Variables",
+    "monitoring": "Uptime Monitoring",
+    "monitoringDesc": "Ping your application periodically and get notified in Slack/Discord if it goes offline.",
+    "monitoringProBadge": "PRO Feature",
+    "enableMonitoring": "Enable Uptime Monitoring",
+    "pingUrl": "Ping URL (Health Check Endpoint)",
+    "pingUrlHint": "e.g. https://api.myproject.com/health",
+    "pingInterval": "Check Interval",
+    "intervalOptions": {
+      "30": "Every 30 seconds",
+      "60": "Every 1 minute",
+      "300": "Every 5 minutes"
+    },
+    "pingStatus": "Current Status",
+    "statusOnline": "Online",
+    "statusOffline": "Offline",
+    "statusUnknown": "Unknown",
+    "lastChecked": "Last checked",
+    "add": "Add Project"
   },
   "deploy": {
     "confirmTitle": "🚀 Confirm Deployment",
@@ -334,7 +401,6 @@
     "noActivity": "No activity yet",
     "noActivitySubtitle": "Actions will appear here as you use the platform"
   },
-
   "settings": {
     "title": "Settings",
     "profile": "Profile",
@@ -351,10 +417,24 @@
     "startCommand": "Start Command",
     "stopCommand": "Stop Command",
     "notifications": "Notifications",
-    "discordWebhook": "Discord Webhook URL",
     "notifyOnSuccess": "Notify on Success",
     "notifyOnFailure": "Notify on Failure",
     "saveSettings": "Save Settings",
+    "twoFactorAuth": "Two-Factor Authentication",
+    "twoFactorDesc": "Secure your account with 2FA using an authenticator app.",
+    "enable2fa": "Enable 2FA",
+    "disable2fa": "Disable 2FA",
+    "twoFactorEnabled": "2FA is Enabled",
+    "twoFactorDisabled": "2FA is Disabled",
+    "setup2fa": "Set Up 2FA",
+    "scanQrCode": "1. Scan the QR code below with your Authenticator App (Google Authenticator, Authy, etc).",
+    "cantScanQr": "Can't scan the QR code?",
+    "enterKeyManually": "Enter this key manually:",
+    "verify2faCode": "2. Enter the 6-digit code from your app to verify.",
+    "cancelSetup": "Cancel Setup",
+    "verifyAndEnable": "Verify & Enable",
+    "enterPasswordToDisable": "Enter your password to disable 2FA",
+    "confirmDisable": "Confirm Disable",
     "appearance": "Appearance",
     "sidebarPosition": "Sidebar Position",
     "positions": {
@@ -405,7 +485,6 @@
     },
     "gitPolling": "Git Polling",
     "pollingDesc": "How often should the system check for new commits on auto-deploy enabled projects?",
-
     "intervals": {
       "30s": "Every 30 seconds",
       "1m": "Every 1 minute",
@@ -421,7 +500,16 @@
     "githubDisconnected": "GitHub disconnected successfully",
     "githubDisconnectTitle": "Disconnect GitHub",
     "githubDisconnectConfirm": "Are you sure you want to disconnect your GitHub account?",
-    "githubDisconnectWarning": "You will need to reconnect to import repositories or use auto-deployments."
+    "githubDisconnectWarning": "You will need to reconnect to import repositories or use auto-deployments.",
+    "alerts": "Notifications & Alerts",
+    "alertsTitle": "Deployment Webhooks",
+    "alertsDesc": "Receive real-time notifications about your deployments in Slack or Discord.",
+    "alertsProBadge": "PRO Feature",
+    "slackWebhook": "Slack Webhook URL",
+    "slackWebhookHint": "Get from Slack channel integrations",
+    "discordWebhook": "Discord Webhook URL",
+    "discordWebhookHint": "Get from Discord channel Integrations > Webhooks",
+    "enterTwoFactorCode": "Please enter the verification code"
   },
   "nginx": {
     "title": "Nginx Configuration Manager",
@@ -473,6 +561,20 @@
       "errored": "Errored",
       "launching": "Launching"
     }
+  },
+  "docker": {
+    "pullHelper": "Enter a public image from Docker Hub (e.g. ubuntu:20.04) or a full registry URL (e.g. ghcr.io/user/image:tag).",
+    "notInstalled": "Docker is not installed on this server",
+    "title": "Docker Manager",
+    "subtitle": "Manage Docker containers and images",
+    "pullImage": "Pull Image",
+    "containers": "Containers",
+    "images": "Images",
+    "noContainers": "No containers found",
+    "noImages": "No images found",
+    "imageName": "Image Name",
+    "pulling": "Pulling...",
+    "pull": "Pull"
   },
   "notFound": {
     "title": "Page Not Found",
@@ -639,6 +741,406 @@
   },
   "ports": {
     "title": "Port Manager",
-    "subtitle": "Manage open ports and firewall rules on {{server}}"
+    "subtitle": "Manage open ports and firewall rules on {{server}}",
+    "showingCount": "Showing {{count}} ports",
+    "fetchFailed": "Failed to fetch ports",
+    "killSuccess": "Process killed successfully",
+    "killFailed": "Failed to kill process",
+    "totalOpen": "Total Ports",
+    "protocol": "Protocol",
+    "command": "Command",
+    "user": "User",
+    "proto": "Proto",
+    "address": "Address (Name)",
+    "noPortsFound": "No matching ports found.",
+    "killProcess": "Kill Process",
+    "confirmKill": "Confirm Kill",
+    "killCTA": "Kill Process"
+  },
+  "timeMachine": {
+    "noSnapshots": "No historical snapshots available. The system will capture one every 5 minutes automatically.",
+    "title": "Infrastructure Time Machine",
+    "subtitle": "Scrub back in time to investigate past CPU/Memory spikes and process crashes.",
+    "time": "Time:",
+    "systemUsage": "System Usage",
+    "cpuUsage": "CPU Usage",
+    "memoryUsage": "Memory Usage",
+    "networkConnections": "Network Connections",
+    "established": "Established:",
+    "timeWait": "TimeWait:",
+    "topProcesses": "Top 10 Processes (By CPU)",
+    "systemLogsAt": "System Logs at exactly",
+    "noLogsFound": "No logs found..."
+  },
+  "security": {
+    "tabTitle": "Security & Compliance",
+    "title": "Compliance Autopilot",
+    "subtitle": "Automated security scanner for your infrastructure.",
+    "runScan": "Run Security Scan",
+    "scanning": "Scanning...",
+    "scanningProgress": "Scanning in progress...",
+    "fetchFailed": "Failed to load security scans",
+    "scanSuccess": "Scan completed successfully!",
+    "scanFailed": "Security scan failed",
+    "scanResults": "Scan Results",
+    "clickToExpand": "click any item for details",
+    "moreIssues": "more issues...",
+    "passed": "passed",
+    "downloadPdfFailed": "Failed to download PDF report",
+    "noScans": "No security scans yet",
+    "noScansSubtitle": "Run a scan to assess the security of this server. It checks for exposed ports, weak SSH config, and outdated packages.",
+    "runFirstScan": "Run your first scan",
+    "overallScore": "Overall Score",
+    "lastScanned": "Last Scanned",
+    "issues": "Identified Issues",
+    "noIssuesFound": "Amazing! No security issues found.",
+    "passedChecks": "Passed Checks",
+    "scanHistory": "Scan History",
+    "score": "Score",
+    "issuesCount": "Issues",
+    "downloadPdf": "Download PDF Report",
+    "autoFix": "Auto-Fix",
+    "fixNow": "Fix This Issue",
+    "autoRemediateTitle": "Auto-Remediate",
+    "whatWillHappen": "What will happen:",
+    "fixWarning": "This will execute commands on your server. Make sure you have a backup.",
+    "confirmFix": "Apply Fix",
+    "fixSuccess": "Fix applied successfully! Re-run the scan to verify."
+  },
+  "landing": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "login": "Sign In",
+      "register": "Start Free"
+    },
+    "hero": {
+      "title": "Deploy Anything. Anywhere. Instantly.",
+      "subtitle": "Pulse is the ultimate server management platform. Automate deployments, handle databases, NGINX, PM2, and security scanning on your VPS—all from one beautiful dashboard.",
+      "cta": {
+        "start": "Get Started for Free",
+        "dashboard": "Go to Dashboard",
+        "learnMore": "See How it Works"
+      },
+      "terminal": {
+        "line1": "$ git push origin main",
+        "line2": "Detecting changes... 🔍",
+        "line3": "Building project...",
+        "line4": "Container 83b27fe built 📦",
+        "line5": "Deploying to production 🚀",
+        "line6": "Success! Running at https://pulse.domain"
+      }
+    },
+    "techStack": {
+      "title": "Powered by industry standard tools."
+    },
+    "features": {
+      "title": "Everything you need to ship faster",
+      "subtitle": "A powerful toolkit for modern developers and devops.",
+      "deploy": {
+        "title": "Automated Trigger Deployments",
+        "desc": "Connect GitHub and enable push-to-deploy webhooks instantly. No more manual SSH transferring of files."
+      },
+      "nginx": {
+        "title": "Seamless NGINX Routing",
+        "desc": "Manage reverse proxies, domains, and SSL certificates with ease right from the web panel."
+      },
+      "database": {
+        "title": "Database Studio",
+        "desc": "One-click backups and management for Docker-based databases securely managed directly on the VPS."
+      },
+      "security": {
+        "title": "Security Autopilot",
+        "desc": "Continuous scanning and auto-remediation for server vulnerabilities to ensure you never get hacked."
+      },
+      "monitor": {
+        "title": "Realtime Metrics",
+        "desc": "Live CPU, RAM and Docker statistics straight from your servers via WebSockets."
+      },
+      "ci": {
+        "title": "PM2 & Cron Management",
+        "desc": "Full process lifecycle management and scheduled tasks built right into the interface."
+      },
+      "vpn": {
+        "title": "WireGuard Mesh VPN",
+        "desc": "Deploy zero-config, ultra-fast VPN tunnels to connect all your servers and teams globally."
+      },
+      "logs": {
+        "title": "Log Studio",
+        "desc": "Stream real-time logs from Docker, PM2, and your system across all servers from a single centralized dashboard."
+      },
+      "testrunner": {
+        "title": "Pre-Deploy Test Runner",
+        "desc": "Catch bugs before they hit production. Automatically run your test suites before every single deployment."
+      },
+      "pipeline": {
+        "title": "Advanced CI/CD Pipelines",
+        "desc": "Build multi-stage deployments, manage approvals, and execute Blue-Green/Canary rollouts with zero downtime."
+      },
+      "map": {
+        "title": "Interactive Infrastructure Map",
+        "desc": "Visualize your entire server fleet and application topology with a beautiful, real-time animated node graph."
+      },
+      "command": {
+        "title": "Global Command Palette",
+        "desc": "Navigate at the speed of thought. Press Ctrl+K to jump to any server, project, or setting instantly."
+      }
+    },
+    "steps": {
+      "title": "From Code to Production in Minutes",
+      "step1": {
+        "title": "1. Connect your Server",
+        "desc": "Add your VPS credentials via an encrypted SSH connection."
+      },
+      "step2": {
+        "title": "2. Link Repository",
+        "desc": "Point Pulse to your GitHub, GitLab or Bitbucket repository."
+      },
+      "step3": {
+        "title": "3. Push to Deploy",
+        "desc": "We handle the building, PM2 restarting, or Docker image rolling automatically."
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "q1": "Where is my data stored?",
+      "a1": "We use a direct SSH connection. Your source code, databases, and application files never leave your server.",
+      "q2": "Does this work with my framework?",
+      "a2": "Yes! Pulse is agnostic. Whether you use Next.js, Django, Laravel, or Spring Boot, if it runs on Linux, we support it.",
+      "q3": "Do I need to install an agent on my server?",
+      "a3": "No. Pulse works completely agentless via standard SSH protocols.",
+      "q4": "How does the Mesh VPN feature work?",
+      "a4": "Pulse uses WireGuard to create a blazing-fast, secure private network between all your servers, making internal communication safe without exposing ports to the public internet.",
+      "q5": "Can I view logs without opening a terminal?",
+      "a5": "Yes! The centralized Log Studio streams real-time logs from Docker, PM2, Nginx, and system services directly into your browser.",
+      "q6": "Is there a limit on how many projects I can deploy?",
+      "a6": "You can deploy unlimited projects on your servers. Pulse does not charge you based on the number of deployments or projects."
+    },
+    "bottomCta": {
+      "title": "Ready to take control of your servers?",
+      "subtitle": "Join developers worldwide who are shipping faster and managing safer with Pulse.",
+      "button": "Start Deploying Now"
+    },
+    "teams": {
+      "title": "Team Settings",
+      "createTeam": "Create Team",
+      "switchTeam": "Switch Team",
+      "inviteMember": "Invite Member",
+      "role": "Role",
+      "admin": "Admin",
+      "editor": "Editor",
+      "viewer": "Viewer",
+      "personalWorkspace": "Personal Workspace"
+    }
+  },
+  "dockerManager": {
+    "ports": "Ports",
+    "cPU": "CPU",
+    "mEM": "MEM",
+    "size": "Size",
+    "iD": "ID",
+    "logs": "📋 Logs:",
+    "inspect": "🔍 Inspect:",
+    "runContainer": "Run Container:",
+    "portMappings": "Port Mappings",
+    "addPort": "+ Add Port",
+    "environmentVariables": "Environment Variables",
+    "addEnvVar": "+ Add Env Var",
+    "cancel": "Cancel",
+    "run": "Run"
+  },
+  "infrastructureMap": {
+    "onlineRunning": "Online/Running",
+    "offlineStopped": "Offline/Stopped",
+    "deploying": "Deploying",
+    "branch": "Branch:",
+    "clickToViewDetails": "Click to view details →"
+  },
+  "analytics": {
+    "last7Days": "Last 7 days",
+    "last14Days": "Last 14 days",
+    "last30Days": "Last 30 days",
+    "last60Days": "Last 60 days",
+    "last90Days": "Last 90 days",
+    "deployTrends": "📈 Deploy Trends",
+    "activityHeatmap": "🗓️ Activity Heatmap",
+    "h": "h",
+    "topProjects": "🏆 Top Projects",
+    "noDeploymentData": "No deployment data",
+    "title": "Analytics Dashboard",
+    "subtitle": "DORA Metrics & Deployment Insights"
+  },
+  "globalBandwidth": {
+    "lifetime": "(Lifetime)"
+  },
+  "logStudio": {
+    "logStudio": "Log Studio",
+    "centralizedRealtimeLogViewer": "Centralized Real-time Log Viewer",
+    "serviceType": "Service Type",
+    "noTargetsFound": "No targets found",
+    "startStream": "Start Stream",
+    "stopStream": "Stop Stream",
+    "clear": "Clear"
+  },
+  "approvalCenter": {
+    "project": "Project",
+    "reviewedBy": "Reviewed by",
+    "newApprovalRequest": "New Approval Request",
+    "deploy": "Deploy",
+    "configChange": "Config Change",
+    "rollback": "Rollback",
+    "delete": "Delete",
+    "noProjectsAvailable": "No projects available",
+    "cancel": "Cancel",
+    "create": "Create"
+  },
+  "secretVault": {
+    "allTypes": "All Types",
+    "env": "🔧 Env",
+    "key": "🔑 Key",
+    "token": "🎫 Token",
+    "password": "🔐 Password",
+    "cert": "📜 Cert",
+    "other": "📦 Other",
+    "addSecret": "Add Secret",
+    "addEncryptedSecretsLike": "Add encrypted secrets like API keys, tokens, and passwords.",
+    "environmentVariable": "🔧 Environment Variable",
+    "aPIKey": "🔑 API Key",
+    "certificate": "📜 Certificate",
+    "cancel": "Cancel",
+    "encryptSave": "Encrypt & Save"
+  },
+  "webhookDebugger": {
+    "loadLogs": "Load Logs",
+    "testPing": "Test Ping",
+    "clear": "Clear",
+    "headers": "Headers",
+    "body": "Body"
+  },
+  "testRunner": {
+    "history": "History",
+    "selectAProjectAnd": "Select a Project and run tests",
+    "checksDirectoryGitDisk": "Checks: directory, git, disk, node, package.json, ports, memory,               npm test",
+    "ms": "ms",
+    "runHistory": "Run History",
+    "noHistoryFoundFor": "No history found for this project",
+    "testRunDetails": "Test Run Details",
+    "title": "Pre-Deploy Test Runner",
+    "subtitle": "Run pre-flight checks before deploying",
+    "historyError": "Failed to load history",
+    "checksPassed": "All checks passed! Ready to deploy.",
+    "checksFailed": "Some checks failed. Review before deploying.",
+    "runFailed": "Failed to run tests",
+    "selectProject": "Select Project",
+    "running": "Running...",
+    "runTests": "Run Tests",
+    "readyToDeploy": "Ready to Deploy",
+    "notReady": "Not Ready",
+    "passed": "Passed",
+    "failed": "Failed",
+    "skipped": "Skipped",
+    "success": "Success",
+    "passedCount": "Passed"
+  },
+  "pipelineBuilder": {
+    "createPipeline": "Create Pipeline",
+    "noPipelinesDefined": "No pipelines defined",
+    "youHaventCreatedAny": "You haven't created any deployment workflows yet.",
+    "createYourFirstPipeline": "Create your first Pipeline",
+    "workflowSteps": "Workflow Steps",
+    "coreSettings": "Core Settings",
+    "noProjectsFound": "No projects found",
+    "workflowStepsSequence": "Workflow Steps Sequence",
+    "addStep": "Add Step",
+    "noStepsAddedYour": "No steps added. Your pipeline does nothing.",
+    "bashCommand": "⚡ Bash Command",
+    "runTests": "🧪 Run Tests",
+    "triggerDeploy": "🚀 Trigger Deploy",
+    "manualApproval": "✅ Manual Approval",
+    "notification": "🔔 Notification",
+    "cancel": "Cancel",
+    "pipelineExecutionOutput": "Pipeline Execution output",
+    "ms": "ms"
+  },
+  "vpnManager": {
+    "51820UDP": "51820 UDP",
+    "rx": "(Rx)",
+    "tx": "(Tx)",
+    "mB": "(MB)",
+    "noBandwidthDataAvailable": "No bandwidth data available."
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "servers": "Servers",
+    "projects": "Projects",
+    "infrastructureMap": "Infrastructure Map",
+    "vpnManager": "VPN Manager",
+    "secretVault": "Secret Vault",
+    "dockerManager": "Docker Manager",
+    "databaseManager": "Database Studio",
+    "pipelineBuilder": "CI/CD Pipelines",
+    "settings": "Settings"
+  },
+  "pricing": {
+    "title": "Simple, Transparent Pricing",
+    "mostPopular": "Most Popular"
+  },
+  "approvals": {
+    "title": "Approval Center",
+    "newRequest": "New Request",
+    "noApprovals": "No approval requests"
+  },
+  "bandwidth": {
+    "downloadSpeed": "Download Speed",
+    "uploadSpeed": "Upload Speed",
+    "download": "Download",
+    "upload": "Upload (Tx)",
+    "totalDownload": "Total Download",
+    "totalUpload": "Total Upload",
+    "networkSpeed": "Network Speed (Last Hour)"
+  },
+  "infra": {
+    "noData": "No infrastructure data",
+    "title": "Infrastructure Map"
+  },
+  "pipelines": {
+    "title": "Pipeline Builder",
+    "count": "pipelines"
+  },
+  "secrets": {
+    "title": "Secret Vault",
+    "subtitle": "AES-256 encrypted secrets management",
+    "noSecrets": "No secrets stored"
+  },
+  "vpn": {
+    "downloadConfig": "Download Config",
+    "viewQr": "View QR Code",
+    "actionSuccess": "Action successful",
+    "clientCreated": "Client created",
+    "clientDeleted": "Client deleted",
+    "selectServer": "Select a server to manage VPN",
+    "title": "VPN Manager",
+    "subtitle": "Turn your VPS into a personal WireGuard VPN",
+    "stop": "Stop",
+    "start": "Start",
+    "uninstall": "Uninstall",
+    "installNow": "Install VPN Server",
+    "status": "Status",
+    "serverIp": "Server IP",
+    "port": "WireGuard Port",
+    "totalClients": "Clients",
+    "clientsList": "Device List",
+    "addClient": "Add Client",
+    "topClients": "Top 5 Clients Usage",
+    "configureInstall": "Configure VPN Server",
+    "hostLabel": "Host (IP or Domain)",
+    "wgPortLabel": "WireGuard Port (UDP)",
+    "apiPortLabel": "Management Port (TCP)",
+    "defaultAddress": "Client IP Range",
+    "allowedIps": "Allowed IPs",
+    "scanQr": "Scan this with the WireGuard app to connect"
+  },
+  "webhookDebug": {
+    "title": "Webhook Debugger",
+    "subtitle": "Inspect incoming webhook events"
   }
 }

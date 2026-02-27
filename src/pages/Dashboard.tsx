@@ -184,21 +184,21 @@ const Dashboard: React.FC = () => {
       <Grid container spacing={2.5} sx={{ mb: 3, alignItems: "stretch" }}>
         <Grid size={{ xs: 6, md: 3 }}>
           <StatCard
-            icon={<DnsIcon sx={{ color: "#6366f1" }} />}
+            icon={<DnsIcon sx={{ color: "var(--primary-main)" }} />}
             value={stats?.servers.total || 0}
             label={t("dashboard.servers")}
             sub={`${stats?.servers.online || 0} ${t("common.online").toLowerCase()}`}
-            gradient="linear-gradient(135deg, #6366f1, #8b5cf6)"
+            gradient="linear-gradient(135deg, var(--primary-main), var(--secondary-main))"
             onClick={() => navigate("/servers")}
           />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
           <StatCard
-            icon={<FolderIcon sx={{ color: "#8b5cf6" }} />}
+            icon={<FolderIcon sx={{ color: "var(--secondary-main)" }} />}
             value={stats?.projects.total || 0}
             label={t("dashboard.projects")}
             sub={`${stats?.projects.running || 0} ${t("common.running").toLowerCase()}`}
-            gradient="linear-gradient(135deg, #8b5cf6, #a78bfa)"
+            gradient="linear-gradient(135deg, var(--secondary-main), #fdba74)"
             onClick={() => navigate("/projects")}
           />
         </Grid>

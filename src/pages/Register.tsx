@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
+import api from "../services/api";
 import {
   Box,
   Card,
@@ -13,8 +14,11 @@ import {
   Avatar,
   Skeleton,
   CircularProgress,
+  Divider,
 } from "@mui/material";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
+import GitHubIcon from "@mui/icons-material/GitHub";
+import GoogleIcon from "@mui/icons-material/Google";
 import SEO from "../components/SEO";
 
 const Register: React.FC = () => {
@@ -25,6 +29,24 @@ const Register: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleGithubLogin = async () => {
+    try {
+      const { data } = await api.get("/auth/github/login");
+      window.location.href = data.url;
+    } catch (error) {
+      toast.error(t("auth.loginFailed") + " (GitHub)");
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const { data } = await api.get("/auth/google/login");
+      window.location.href = data.url;
+    } catch (error) {
+      toast.error(t("auth.loginFailed") + " (Google)");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,8 +112,9 @@ const Register: React.FC = () => {
                 height: 56,
                 mx: "auto",
                 mb: 2,
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                boxShadow: "0 0 30px rgba(99, 102, 241, 0.3)",
+                background:
+                  "linear-gradient(135deg, var(--primary-main), var(--secondary-main))",
+                boxShadow: "0 0 30px var(--primary-main-30)",
               }}
             >
               <RocketLaunchIcon sx={{ fontSize: 28 }} />
@@ -101,7 +124,8 @@ const Register: React.FC = () => {
               component="h1"
               fontWeight={700}
               sx={{
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                background:
+                  "linear-gradient(135deg, var(--primary-main), var(--secondary-main))",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
               }}
@@ -173,6 +197,38 @@ const Register: React.FC = () => {
             </Button>
           </form>
 
+          <Divider
+            sx={{
+              my: 3,
+              "&::before, &::after": { borderColor: "var(--border-color)" },
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              OR
+            </Typography>
+          </Divider>
+
+          <Box sx={{ display: "flex", gap: 2, mb: 1 }}>
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<GitHubIcon />}
+              onClick={handleGithubLogin}
+              sx={{ borderColor: "var(--border-color)", color: "text.primary" }}
+            >
+              GitHub
+            </Button>
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleLogin}
+              sx={{ borderColor: "var(--border-color)", color: "text.primary" }}
+            >
+              Google
+            </Button>
+          </Box>
+
           <Typography
             variant="body2"
             color="text.secondary"
@@ -182,7 +238,7 @@ const Register: React.FC = () => {
             <Link
               to="/login"
               style={{
-                color: "#818cf8",
+                color: "var(--primary-main)",
                 textDecoration: "none",
                 fontWeight: 500,
               }}

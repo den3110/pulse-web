@@ -27,7 +27,7 @@ const KeyboardShortcuts: React.FC = () => {
     {
       keys: ["Ctrl", "Shift", "D"],
       label: "Go to Dashboard",
-      action: () => navigate("/"),
+      action: () => navigate("/dashboard"),
     },
     {
       keys: ["Ctrl", "Shift", "S"],
@@ -76,7 +76,7 @@ const KeyboardShortcuts: React.FC = () => {
         switch (e.key.toUpperCase()) {
           case "D":
             e.preventDefault();
-            navigate("/");
+            navigate("/dashboard");
             break;
           case "S":
             e.preventDefault();

@@ -31,8 +31,8 @@ const NotFound: React.FC = () => {
           width: 80,
           height: 80,
           mb: 3,
-          background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-          boxShadow: "0 0 40px rgba(99, 102, 241, 0.3)",
+          background: "linear-gradient(135deg, var(--primary-main), var(--secondary-main))",
+          boxShadow: "0 0 40px var(--primary-main-30)",
         }}
       >
         <SentimentVeryDissatisfiedIcon sx={{ fontSize: 44 }} />
@@ -43,7 +43,7 @@ const NotFound: React.FC = () => {
         sx={{
           fontSize: { xs: 72, md: 120 },
           fontWeight: 800,
-          background: "linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa)",
+          background: "linear-gradient(135deg, var(--primary-main), var(--secondary-main), #fdba74)",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
           lineHeight: 1,

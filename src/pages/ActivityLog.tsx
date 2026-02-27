@@ -19,6 +19,7 @@ import {
   MenuItem,
 } from "@mui/material";
 import HistoryIcon from "@mui/icons-material/History";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Activity {
   _id: string;
@@ -96,6 +97,7 @@ const actions = [
 
 const ActivityLog: React.FC = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -136,11 +138,29 @@ const ActivityLog: React.FC = () => {
         }}
       >
         <Box>
-          <Typography variant="body1" fontWeight={500}>
-            {t("activity.title")}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography variant="body1" fontWeight={500}>
+              {user?.currentTeam ? "Team Audit Log" : t("activity.title")}
+            </Typography>
+            {user?.currentTeam && (
+              <Chip
+                label="PRO"
+                size="small"
+                sx={{
+                  bgcolor: "primary.main",
+                  color: "#000",
+                  height: 18,
+                  fontSize: 10,
+                  fontWeight: 800,
+                  borderRadius: 1,
+                }}
+              />
+            )}
+          </Box>
           <Typography variant="body2" color="text.secondary">
-            {t("activity.subtitle")}
+            {user?.currentTeam
+              ? "Showing activities performed by all members within this team workspace."
+              : t("activity.subtitle")}
           </Typography>
         </Box>
         <TextField

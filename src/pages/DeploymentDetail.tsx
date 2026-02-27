@@ -308,6 +308,13 @@ const DeploymentDetail: React.FC = () => {
   const [showSecret, setShowSecret] = useState(false);
   const [savingWebhookReg, setSavingWebhookReg] = useState(false);
 
+  // Uptime Monitoring State
+  const [healthCheckForm, setHealthCheckForm] = useState({
+    url: "",
+    interval: 60,
+  });
+  const [savingHealth, setSavingHealth] = useState(false);
+
   // Fetch project + history, and load logs from the latest deployment
   useEffect(() => {
     const fetchData = async () => {
@@ -322,6 +329,10 @@ const DeploymentDetail: React.FC = () => {
         const deployments: DeploymentRecord[] =
           historyRes.data.deployments || [];
         setHistory(deployments);
+        setHealthCheckForm({
+          url: projectRes.data.healthCheck?.url || "",
+          interval: projectRes.data.healthCheck?.interval || 60,
+        });
 
         // Load logs from the latest deployment (so they survive page reload)
         if (deployments.length > 0) {
@@ -358,12 +369,17 @@ const DeploymentDetail: React.FC = () => {
             // ignore log fetch errors
           }
 
-          // If latest deployment is still in-progress, join its socket room
-          if (IN_PROGRESS.includes(latest.status)) {
+          // If latest deployment is still in-progress and project is not stopped/failed, join its socket room
+          const isProjectActive = !["stopped", "idle", "failed"].includes(
+            projectRes.data.status,
+          );
+          if (IN_PROGRESS.includes(latest.status) && isProjectActive) {
             setDeploying(true);
             setActiveDeploymentId(latest._id);
             const socket = connectSocket();
             socket.emit("join:deployment", latest._id);
+          } else {
+            setDeploying(false);
           }
         }
       } catch (error) {
@@ -640,6 +656,50 @@ const DeploymentDetail: React.FC = () => {
     }
   };
 
+  const handleToggleHealthCheck = async (enabled: boolean) => {
+    setSavingHealth(true);
+    try {
+      const payload = {
+        enabled,
+        url: healthCheckForm.url,
+        interval: healthCheckForm.interval,
+      };
+      const { data } = await api.put(`/projects/${projectId}/health`, payload);
+      setProject(data);
+      toast.success(enabled ? "Monitoring enabled" : "Monitoring disabled");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Failed to update monitor settings",
+      );
+    } finally {
+      setSavingHealth(false);
+    }
+  };
+
+  const saveHealthCheck = async () => {
+    if (!healthCheckForm.url) {
+      toast.error("Please provide a ping URL");
+      return;
+    }
+    setSavingHealth(true);
+    try {
+      const payload = {
+        enabled: true,
+        url: healthCheckForm.url,
+        interval: healthCheckForm.interval,
+      };
+      const { data } = await api.put(`/projects/${projectId}/health`, payload);
+      setProject(data);
+      toast.success("Monitoring settings saved");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Failed to update monitor settings",
+      );
+    } finally {
+      setSavingHealth(false);
+    }
+  };
+
   const addEditEnvVar = () => {
     setEditForm((prev) => ({
       ...prev,
@@ -807,7 +867,7 @@ const DeploymentDetail: React.FC = () => {
                   }}
                   sx={{
                     bgcolor: "rgba(255,255,255,0.06)",
-                    "&:hover": { bgcolor: "rgba(99, 102, 241, 0.2)" },
+                    "&:hover": { bgcolor: "var(--primary-main-20)" },
                   }}
                 >
                   <EditIcon fontSize="small" />
@@ -822,18 +882,30 @@ const DeploymentDetail: React.FC = () => {
                   <FiberManualRecordIcon sx={{ fontSize: "12px !important" }} />
                 }
               />
-              {project?.lastHealthCheck && project.healthCheckUrl && (
+              {project?.healthCheck?.enabled && (
                 <Tooltip
-                  title={`Health: ${project.lastHealthCheck.status} ${project.lastHealthCheck.responseTime ? `(${project.lastHealthCheck.responseTime}ms)` : ""}`}
+                  title={`${t("projects.pingStatus")}: ${
+                    project.healthCheck.lastStatus === "up"
+                      ? t("projects.statusOnline")
+                      : project.healthCheck.lastStatus === "down"
+                        ? t("projects.statusOffline")
+                        : t("projects.statusUnknown")
+                  }`}
                 >
                   <Chip
-                    label={project.lastHealthCheck.status}
+                    label={
+                      project.healthCheck.lastStatus === "up"
+                        ? "Online"
+                        : project.healthCheck.lastStatus === "down"
+                          ? "Offline"
+                          : "Unknown"
+                    }
                     size="small"
-                    className={`health-chip health-${project.lastHealthCheck.status}`}
+                    className={`health-chip health-${project.healthCheck.lastStatus}`}
                     color={
-                      project.lastHealthCheck.status === "healthy"
+                      project.healthCheck.lastStatus === "up"
                         ? "success"
-                        : project.lastHealthCheck.status === "unhealthy"
+                        : project.healthCheck.lastStatus === "down"
                           ? "error"
                           : "default"
                     }
@@ -1054,6 +1126,131 @@ const DeploymentDetail: React.FC = () => {
             />
           )}
 
+          {/* Uptime Monitoring */}
+          <Box
+            className="uptime-monitoring-card"
+            sx={{
+              mb: 3,
+              p: 2,
+              borderRadius: 2,
+              bgcolor: "rgba(0,0,0,0.15)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Box>
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={600}
+                  display="flex"
+                  alignItems="center"
+                  gap={1}
+                >
+                  {t("projects.monitoring")}
+                  <Chip
+                    size="small"
+                    label={t("projects.monitoringProBadge")}
+                    color="primary"
+                    variant="filled"
+                    sx={{ height: 18, fontSize: 10, fontWeight: 700 }}
+                  />
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {t("projects.monitoringDesc")}
+                </Typography>
+                {project?.healthCheck?.lastChecked && (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    display="block"
+                    sx={{ mt: 0.5 }}
+                  >
+                    {t("projects.lastChecked")}:{" "}
+                    {new Date(project.healthCheck.lastChecked).toLocaleString(
+                      "vi-VN",
+                    )}
+                  </Typography>
+                )}
+                {project?.healthCheck?.errorMessage && (
+                  <Typography
+                    variant="caption"
+                    color="error"
+                    display="block"
+                    sx={{ mt: 0.5 }}
+                  >
+                    {project.healthCheck.errorMessage}
+                  </Typography>
+                )}
+              </Box>
+              <Switch
+                checked={project?.healthCheck?.enabled || false}
+                onChange={(e) => handleToggleHealthCheck(e.target.checked)}
+                disabled={savingHealth}
+                color="primary"
+              />
+            </Box>
+
+            {project?.healthCheck?.enabled && (
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 1.5,
+                  alignItems: "center",
+                  mt: 2,
+                  flexWrap: "wrap",
+                }}
+              >
+                <TextField
+                  label={t("projects.pingUrl")}
+                  size="small"
+                  placeholder={t("projects.pingUrlHint")}
+                  value={healthCheckForm.url}
+                  onChange={(e) =>
+                    setHealthCheckForm({
+                      ...healthCheckForm,
+                      url: e.target.value,
+                    })
+                  }
+                  sx={{ flex: 1, minWidth: 200 }}
+                />
+                <TextField
+                  select
+                  label={t("projects.pingInterval")}
+                  size="small"
+                  value={healthCheckForm.interval}
+                  onChange={(e) =>
+                    setHealthCheckForm({
+                      ...healthCheckForm,
+                      interval: parseInt(e.target.value),
+                    })
+                  }
+                  sx={{ width: 150 }}
+                  slotProps={{ select: { native: true } }}
+                >
+                  <option value={30}>{t("projects.intervalOptions.30")}</option>
+                  <option value={60}>{t("projects.intervalOptions.60")}</option>
+                  <option value={300}>
+                    {t("projects.intervalOptions.300")}
+                  </option>
+                </TextField>
+                <Button
+                  variant="contained"
+                  onClick={saveHealthCheck}
+                  disabled={savingHealth}
+                  sx={{ minWidth: 100 }}
+                >
+                  {savingHealth ? <CircularProgress size={24} /> : "Save"}
+                </Button>
+              </Box>
+            )}
+          </Box>
+
           <Box
             className="deployment-actions"
             sx={{
@@ -1166,9 +1363,9 @@ const DeploymentDetail: React.FC = () => {
                 gap: 1,
                 mt: 1,
                 p: 1.5,
-                bgcolor: "rgba(99, 102, 241, 0.1)",
+                bgcolor: "var(--primary-main-10)",
                 borderRadius: 2,
-                border: "1px solid rgba(99, 102, 241, 0.3)",
+                border: "1px solid var(--primary-main-30)",
               }}
             >
               <ScheduleIcon sx={{ color: "info.main", fontSize: 18 }} />
@@ -1268,7 +1465,8 @@ const DeploymentDetail: React.FC = () => {
             className="terminal-container"
             sx={{
               bgcolor: "var(--terminal-bg)",
-              borderTop: "1px solid rgba(255,255,255,0.06)",
+              borderTop: 1,
+              borderColor: "divider",
             }}
           >
             {/* Terminal header */}
@@ -1280,8 +1478,9 @@ const DeploymentDetail: React.FC = () => {
                 justifyContent: "space-between",
                 px: 2,
                 py: 1,
-                bgcolor: "rgba(255,255,255,0.02)",
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
+                bgcolor: "action.hover",
+                borderBottom: 1,
+                borderColor: "divider",
               }}
             >
               <Box sx={{ display: "flex", gap: 0.8 }}>
@@ -1318,7 +1517,10 @@ const DeploymentDetail: React.FC = () => {
             {/* Log body */}
             <div className="terminal-body" ref={logRef}>
               {logs.length === 0 ? (
-                <div className="log-line info" style={{ color: "#6b7280" }}>
+                <div
+                  className="log-line info"
+                  style={{ color: "var(--terminal-text)", opacity: 0.6 }}
+                >
                   <span className="log-content">
                     Waiting for deployment logs... Click "Deploy" to start.
                   </span>
@@ -1617,8 +1819,9 @@ const DeploymentDetail: React.FC = () => {
               fontSize: 12,
               maxHeight: 400,
               overflow: "auto",
-              color: "#c9d1d9",
-              border: "1px solid rgba(255,255,255,0.06)",
+              color: "var(--terminal-text)",
+              border: 1,
+              borderColor: "divider",
             }}
           >
             {historicalLogsLoading ? (
@@ -1658,7 +1861,7 @@ const DeploymentDetail: React.FC = () => {
                       ? "#3fb950"
                       : type === "warning"
                         ? "#eab308"
-                        : "#c9d1d9";
+                        : "var(--terminal-text)";
                 return (
                   <div
                     key={i}

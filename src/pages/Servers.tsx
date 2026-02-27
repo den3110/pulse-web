@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
@@ -26,6 +26,7 @@ import {
   LinearProgress,
   Collapse,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import {
   DndContext,
   closestCenter,
@@ -109,8 +110,20 @@ function SortableServerGridItem({ id, children }: SortableServerGridItemProps) {
 
 const Servers: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
-  // const theme = useTheme(); // This line was commented out or missing context, assuming it's not needed for this change.
+
+  // Check URL params for ?add=true from Command Palette
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("add") === "true") {
+      setEditing(null);
+      setShowModal(true);
+      // Clean up the URL
+      navigate("/servers", { replace: true });
+    }
+  }, [location.search, navigate]);
+
   // Server state from context
   // Assuming useServer is a custom hook that provides server context
   const {
@@ -169,6 +182,7 @@ const Servers: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Server | null>(null);
   const [testing, setTesting] = useState<string | null>(null);
+  const [connectLoading, setConnectLoading] = useState(false);
   const [statsMap, setStatsMap] = useState<Record<string, ServerStats>>({});
   const [statsLoading, setStatsLoading] = useState<Record<string, boolean>>({});
   const [expandedStats, setExpandedStats] = useState<Record<string, boolean>>(
@@ -236,21 +250,58 @@ const Servers: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (
+    e: React.FormEvent,
+    action: "save" | "connect" = "save",
+  ) => {
     e.preventDefault();
     try {
       if (editing) {
         await api.put(`/servers/${editing._id}`, form);
         toast.success(t("servers.updated"));
+        setShowModal(false);
+        resetForm();
+        refreshServers();
       } else {
-        await api.post("/servers", form);
-        toast.success(t("servers.added"));
+        if (action === "connect") {
+          setConnectLoading(true);
+        }
+
+        // Add new server
+        const { data } = await api.post("/servers", form);
+        const newServerId = data._id;
+
+        if (action === "connect") {
+          try {
+            const testRes = await api.post(`/servers/${newServerId}/test`);
+            testRes.data.success
+              ? toast.success(
+                  t(
+                    "servers.addedAndConnected",
+                    "Added & Connected successfully",
+                  ),
+                )
+              : toast.error(
+                  `${t("servers.testFailed")} ${testRes.data.message}`,
+                );
+          } catch (testErr: any) {
+            toast.error(
+              testErr.response?.data?.message || t("servers.testFailed"),
+            );
+          } finally {
+            setConnectLoading(false);
+          }
+        } else {
+          toast.success(t("servers.added"));
+        }
+
+        setShowModal(false);
+        resetForm();
+        refreshServers();
       }
-      setShowModal(false);
-      resetForm();
-      refreshServers();
     } catch (error: any) {
       toast.error(error.response?.data?.message || t("common.failed"));
+      setConnectLoading(false);
     }
   };
 
@@ -274,7 +325,7 @@ const Servers: React.FC = () => {
         data.success
           ? toast.success(t("servers.testSuccess"))
           : toast.error(`${t("servers.testFailed")} ${data.message}`);
-        refreshServers();
+        refreshServers(true); // Silent refresh to avoid skeleton flash
       } catch (error: any) {
         toast.error(error.response?.data?.message || t("servers.testFailed"));
       } finally {
@@ -800,13 +851,25 @@ const Servers: React.FC = () => {
       >
         <Box
           component="form"
-          onSubmit={handleSubmit}
+          onSubmit={(e) => handleSubmit(e, "save")}
           sx={{ width: { xs: "100%", sm: 400 }, p: 3, pt: 4 }}
           role="presentation"
         >
-          <Typography variant="h6" gutterBottom>
-            {editing ? t("servers.editServer") : t("servers.addServer")}
-          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
+            <Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+              {editing ? t("servers.editServer") : t("servers.addServer")}
+            </Typography>
+            <IconButton onClick={() => setShowModal(false)} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
 
           <TextField
             label={t("common.name")}
@@ -830,6 +893,7 @@ const Servers: React.FC = () => {
               label={t("servers.host")}
               placeholder="192.168.1.100"
               value={form.host}
+              fullWidth
               onChange={(e) => setForm({ ...form, host: e.target.value })}
               required
               InputProps={{
@@ -857,6 +921,7 @@ const Servers: React.FC = () => {
             <TextField
               label={t("servers.port")}
               type="number"
+              fullWidth
               value={form.port}
               onChange={(e) =>
                 setForm({ ...form, port: parseInt(e.target.value) })
@@ -875,26 +940,26 @@ const Servers: React.FC = () => {
             <TextField
               label={t("servers.username")}
               placeholder="root"
+              fullWidth
               value={form.username}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
               required
             />
-            <FormControl fullWidth>
-              <InputLabel>{t("servers.authType")}</InputLabel>
-              <Select
-                value={form.authType}
-                label={t("servers.authType")}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    authType: e.target.value as "password" | "key",
-                  })
-                }
-              >
-                <MenuItem value="password">{t("servers.password")}</MenuItem>
-                <MenuItem value="key">{t("servers.privateKey")}</MenuItem>
-              </Select>
-            </FormControl>
+            <TextField
+              select
+              fullWidth
+              label={t("servers.authType")}
+              value={form.authType}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  authType: e.target.value as "password" | "key",
+                })
+              }
+            >
+              <MenuItem value="password">{t("servers.password")}</MenuItem>
+              <MenuItem value="key">{t("servers.privateKey")}</MenuItem>
+            </TextField>
           </Box>
 
           {form.authType === "password" ? (
@@ -927,12 +992,46 @@ const Servers: React.FC = () => {
           )}
 
           <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-            <Button onClick={() => setShowModal(false)} variant="outlined">
+            <Button
+              onClick={() => setShowModal(false)}
+              variant="outlined"
+              disabled={connectLoading}
+            >
               {t("common.cancel")}
             </Button>
-            <Button type="submit" variant="contained">
-              {editing ? t("common.update") : t("common.add")}
-            </Button>
+            {editing ? (
+              <Button type="submit" variant="contained">
+                {t("common.update")}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  onClick={(e) => handleSubmit(e, "save")}
+                  variant="outlined"
+                  disabled={connectLoading}
+                >
+                  {t("common.add")}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={(e) => handleSubmit(e, "connect")}
+                  variant="contained"
+                  disabled={connectLoading}
+                  startIcon={
+                    connectLoading ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <PowerIcon />
+                    )
+                  }
+                >
+                  {connectLoading
+                    ? t("servers.connecting", "Connecting...")
+                    : t("servers.addAndConnect", "Add & Connect")}
+                </Button>
+              </>
+            )}
           </Box>
         </Box>
       </Drawer>

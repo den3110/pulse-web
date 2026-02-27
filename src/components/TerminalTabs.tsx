@@ -7,6 +7,7 @@ import {
   Typography,
   Card,
   CardContent,
+  useTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
@@ -38,6 +39,8 @@ const TerminalTabs: React.FC<TerminalTabsProps> = ({
   const [activeTab, setActiveTab] = useState(0);
   const [nextId, setNextId] = useState(2);
   const [collapsed, setCollapsed] = useState(false);
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
 
   // Better implementation:
   const lastPathRef = React.useRef(initialPath);
@@ -93,9 +96,11 @@ const TerminalTabs: React.FC<TerminalTabsProps> = ({
         display: "flex",
         flexDirection: "column",
         height: collapsed ? "auto" : "100%",
-        bgcolor: "#1e1e1e",
+        bgcolor: "var(--terminal-bg)",
+        color: "var(--terminal-text)",
         transition: "height 0.3s ease",
-        borderTop: "1px solid rgba(255,255,255,0.1)",
+        borderTop: 1,
+        borderColor: "divider",
       }}
     >
       {/* Header / Toggle */}
@@ -106,8 +111,9 @@ const TerminalTabs: React.FC<TerminalTabsProps> = ({
           justifyContent: "space-between",
           px: 2,
           py: 1,
-          borderBottom: collapsed ? "none" : "1px solid rgba(255,255,255,0.1)",
-          bgcolor: "#252526", // VS Code-like header
+          borderBottom: collapsed ? "none" : 1,
+          borderColor: "divider",
+          bgcolor: isDark ? "#252526" : "#f1f5f9", // VS Code-like header or light gray
           cursor: "pointer",
         }}
         onClick={() => setCollapsed(!collapsed)}
@@ -160,7 +166,7 @@ const TerminalTabs: React.FC<TerminalTabsProps> = ({
             alignItems: "center",
             borderBottom: 1,
             borderColor: "divider",
-            bgcolor: "#252526",
+            bgcolor: isDark ? "#252526" : "#f1f5f9",
           }}
         >
           <Tabs
@@ -177,7 +183,10 @@ const TerminalTabs: React.FC<TerminalTabsProps> = ({
                 py: 0,
                 fontSize: "0.8rem",
                 color: "text.secondary",
-                "&.Mui-selected": { color: "text.primary", bgcolor: "#1e1e1e" },
+                "&.Mui-selected": {
+                  color: "text.primary",
+                  bgcolor: "var(--terminal-bg)",
+                },
               },
               "& .MuiTabs-indicator": { bgcolor: "primary.main" },
             }}

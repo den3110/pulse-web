@@ -272,7 +272,7 @@ const ServerFolderBrowserDialog: React.FC<ServerFolderBrowserDialogProps> = ({
                   borderRadius: 1.5,
                   mb: 0.5,
                   mx: 1,
-                  "&:hover": { bgcolor: "rgba(99, 102, 241, 0.15)" },
+                  "&:hover": { bgcolor: "var(--primary-main-15)" },
                   transition: "all 0.15s",
                 }}
               >

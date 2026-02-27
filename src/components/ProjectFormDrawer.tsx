@@ -58,6 +58,7 @@ export interface FormState {
   stopCommand: string;
   autoDeploy: boolean;
   processManager: "nohup" | "pm2";
+  environment: "node" | "python" | "static" | "docker-compose";
 }
 
 const DEFAULT_FORM: FormState = {
@@ -75,6 +76,7 @@ const DEFAULT_FORM: FormState = {
   stopCommand: "",
   autoDeploy: false,
   processManager: "nohup",
+  environment: "node",
 };
 
 interface ProjectFormDrawerProps {
@@ -136,6 +138,7 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
         stopCommand: editing.stopCommand,
         autoDeploy: editing.autoDeploy,
         processManager: editing.processManager || "nohup",
+        environment: editing.environment || "node",
       });
       const vars = editing.envVars
         ? Object.entries(editing.envVars).map(([key, value]) => ({
@@ -596,91 +599,131 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
         fullWidth
       />
 
-      {/* Commands */}
-      <Typography
-        variant="caption"
-        fontWeight={600}
-        color="text.secondary"
-        sx={{ mb: 1, display: "block" }}
-        className="commands-section-title"
+      {/* Environment */}
+      <FormControl
+        fullWidth
+        sx={{ mb: 2 }}
+        className="input-project-environment"
       >
-        {t("projects.commandsSection")}
-      </Typography>
-      <Box
-        className="commands-grid"
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-          gap: 2,
-          mb: 2,
-        }}
-      >
-        <TextField
-          label={t("settings.installCommand")}
-          placeholder="npm install"
-          value={form.installCommand}
-          onChange={(e) => setForm({ ...form, installCommand: e.target.value })}
-          size="small"
-          className="input-install-cmd"
-        />
-        <TextField
-          label={t("settings.buildCommand")}
-          placeholder="npm run build"
-          value={form.buildCommand}
-          onChange={(e) => setForm({ ...form, buildCommand: e.target.value })}
-          size="small"
-          className="input-build-cmd"
-        />
-        <TextField
-          label={t("settings.startCommand")}
-          placeholder="npm start"
-          value={form.startCommand}
-          onChange={(e) => setForm({ ...form, startCommand: e.target.value })}
-          size="small"
-          className="input-start-cmd"
-        />
-        <TextField
-          label={t("settings.stopCommand")}
-          placeholder="pm2 stop app"
-          value={form.stopCommand}
-          onChange={(e) => setForm({ ...form, stopCommand: e.target.value })}
-          size="small"
-          className="input-stop-cmd"
-        />
-      </Box>
-
-      {/* Process Manager */}
-      <FormControl fullWidth sx={{ mb: 2 }} className="input-process-manager">
-        <InputLabel>Process Manager</InputLabel>
+        <InputLabel>Environment</InputLabel>
         <Select
-          value={form.processManager}
-          label="Process Manager"
+          value={form.environment}
+          label="Environment"
           onChange={(e) =>
             setForm({
               ...form,
-              processManager: e.target.value as "nohup" | "pm2",
+              environment: e.target.value as FormState["environment"],
             })
           }
-          className="select-process-manager"
         >
-          <MenuItem value="nohup">
-            <Box>
-              <Typography variant="body1">Nohup (Default)</Typography>
-              <Typography variant="caption" color="text.secondary">
-                Simple background process
-              </Typography>
-            </Box>
-          </MenuItem>
-          <MenuItem value="pm2">
-            <Box>
-              <Typography variant="body1">PM2</Typography>
-              <Typography variant="caption" color="text.secondary">
-                Advanced process manager (auto-restart, monitoring)
-              </Typography>
-            </Box>
-          </MenuItem>
+          <MenuItem value="node">Node.js</MenuItem>
+          <MenuItem value="python">Python</MenuItem>
+          <MenuItem value="static">Static HTML/Frontend</MenuItem>
+          <MenuItem value="docker-compose">Docker Compose</MenuItem>
         </Select>
       </FormControl>
+
+      {/* Commands - Hiden for docker-compose */}
+      {form.environment !== "docker-compose" && (
+        <>
+          <Typography
+            variant="caption"
+            fontWeight={600}
+            color="text.secondary"
+            sx={{ mb: 1, display: "block" }}
+            className="commands-section-title"
+          >
+            {t("projects.commandsSection")}
+          </Typography>
+          <Box
+            className="commands-grid"
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              gap: 2,
+              mb: 2,
+            }}
+          >
+            <TextField
+              label={t("settings.installCommand")}
+              placeholder="npm install"
+              value={form.installCommand}
+              onChange={(e) =>
+                setForm({ ...form, installCommand: e.target.value })
+              }
+              size="small"
+              className="input-install-cmd"
+            />
+            <TextField
+              label={t("settings.buildCommand")}
+              placeholder="npm run build"
+              value={form.buildCommand}
+              onChange={(e) =>
+                setForm({ ...form, buildCommand: e.target.value })
+              }
+              size="small"
+              className="input-build-cmd"
+            />
+            <TextField
+              label={t("settings.startCommand")}
+              placeholder="npm start"
+              value={form.startCommand}
+              onChange={(e) =>
+                setForm({ ...form, startCommand: e.target.value })
+              }
+              size="small"
+              className="input-start-cmd"
+            />
+            <TextField
+              label={t("settings.stopCommand")}
+              placeholder="pm2 stop app"
+              value={form.stopCommand}
+              onChange={(e) =>
+                setForm({ ...form, stopCommand: e.target.value })
+              }
+              size="small"
+              className="input-stop-cmd"
+            />
+          </Box>
+
+          {/* Process Manager */}
+          <FormControl
+            fullWidth
+            sx={{ mb: 2 }}
+            className="input-process-manager"
+          >
+            <InputLabel>Process Manager</InputLabel>
+            <Select
+              value={form.processManager}
+              label="Process Manager"
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  processManager: e.target.value as "nohup" | "pm2",
+                })
+              }
+              className="select-process-manager"
+            >
+              <MenuItem value="nohup">
+                <Box>
+                  <Typography variant="body1">Nohup (Default)</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Simple background process
+                  </Typography>
+                </Box>
+              </MenuItem>
+              <MenuItem value="pm2">
+                <Box>
+                  <Typography variant="body1">PM2</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Advanced process manager (auto-restart, monitoring)
+                  </Typography>
+                </Box>
+              </MenuItem>
+            </Select>
+          </FormControl>
+        </>
+      )}
 
       {/* Environment Variables */}
       <Box sx={{ mb: 2 }} className="env-vars-section">

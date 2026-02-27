@@ -1888,13 +1888,15 @@ const FTPManager: React.FC = () => {
             alignItems: { xs: "stretch", sm: "center" },
             flexDirection: { xs: "column", sm: "row" },
             position: "sticky",
-            top: { xs: 56, sm: 64 }, // AppBar height
+            top: { xs: -16, md: -32 }, // Adjusted for Layout's main padding
             zIndex: 10,
             bgcolor: "background.default",
             pt: 1.5,
             pb: 1.5,
-            mx: 0,
-            px: 0,
+            mx: { xs: -2, md: -4 },
+            px: { xs: 2, md: 4 },
+            borderBottom: "1px solid",
+            borderColor: "divider",
           }}
         >
           <TextField
@@ -1960,7 +1962,11 @@ const FTPManager: React.FC = () => {
           transition: "border-color 0.2s",
         }}
       >
-        <CardContent sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+        <CardContent
+          sx={{
+            p: { xs: 1, sm: 2, md: 3 },
+          }}
+        >
           {dragOver && (
             <Box
               sx={{
@@ -2144,7 +2150,7 @@ const FTPManager: React.FC = () => {
             ) : (
               /* ── Desktop: table layout ── */
               <TableContainer>
-                <Table size="small" stickyHeader>
+                <Table size="small">
                   <TableHead>
                     <TableRow>
                       <TableCell padding="checkbox">
@@ -2944,10 +2950,25 @@ const FTPManager: React.FC = () => {
         onClose={() => setBookmarkDrawerOpen(false)}
       >
         <Box sx={{ width: 300, p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            <BookmarkIcon sx={{ mr: 1, verticalAlign: "middle" }} />
-            {t("ftp.bookmarks")}
-          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 1,
+            }}
+          >
+            <Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+              <BookmarkIcon sx={{ mr: 1, verticalAlign: "middle" }} />
+              {t("ftp.bookmarks")}
+            </Typography>
+            <IconButton
+              onClick={() => setBookmarkDrawerOpen(false)}
+              size="small"
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
           <Divider sx={{ mb: 1 }} />
           {bookmarks.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
@@ -3000,10 +3021,22 @@ const FTPManager: React.FC = () => {
         onClose={() => setRecentDrawerOpen(false)}
       >
         <Box sx={{ width: 320, p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            <HistoryIcon sx={{ mr: 1, verticalAlign: "middle" }} />
-            {t("ftp.recent")}
-          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 1,
+            }}
+          >
+            <Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+              <HistoryIcon sx={{ mr: 1, verticalAlign: "middle" }} />
+              {t("ftp.recent")}
+            </Typography>
+            <IconButton onClick={() => setRecentDrawerOpen(false)} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
           <Divider sx={{ mb: 1 }} />
           {recentFiles.length === 0 ? (
             <Typography variant="body2" color="text.secondary">

@@ -1,6 +1,7 @@
 {
   "nav": {
     "dashboard": "Bảng điều khiển",
+    "docs": "Tài liệu",
     "servers": "Máy chủ",
     "projects": "Dự án",
     "nginx": "Nginx",
@@ -11,7 +12,18 @@
     "users": "Người dùng",
     "settings": "Cài đặt",
     "database": "Cơ sở dữ liệu",
-    "ports": "Cổng"
+    "ports": "Cổng",
+    "docker": "Docker",
+    "infrastructure": "Bản đồ hạ tầng",
+    "analytics": "Phân tích",
+    "bandwidth": "Băng thông",
+    "approvals": "Phê duyệt",
+    "secrets": "Bí mật",
+    "webhookDebug": "Webhooks",
+    "testRunner": "Kiểm tra",
+    "pipelines": "Pipeline",
+    "vpn": "Máy chủ VPN",
+    "logs": "Trình duyệt Log"
   },
   "seo": {
     "defaultDescription": "Pulse - Quản lý triển khai Git trên máy chủ VPS dễ dàng.",
@@ -20,7 +32,10 @@
       "title": "Đăng nhập",
       "description": "Đăng nhập vào tài khoản của bạn"
     },
-    "register": { "title": "Đăng ký", "description": "Tạo tài khoản mới" },
+    "register": {
+      "title": "Đăng ký",
+      "description": "Tạo tài khoản mới"
+    },
     "dashboard": {
       "title": "Bảng điều khiển",
       "description": "Xem tổng quan triển khai"
@@ -64,7 +79,13 @@
     "dbName": "Tên CSDL",
     "dbUser": "Tên đăng nhập",
     "dbPassword": "Mật khẩu",
-    "startBackup": "Bắt đầu sao lưu"
+    "startBackup": "Bắt đầu sao lưu",
+    "fetchFailed": "Không thể lấy danh sách container",
+    "backupCreated": "Trích xuất sao lưu tạo lúc",
+    "backupFailed": "Sao lưu thất bại",
+    "restoreSuccess": "Khôi phục hoàn tất",
+    "containers": "Containers",
+    "backups": "Bản sao lưu"
   },
   "common": {
     "add": "Thêm",
@@ -118,13 +139,20 @@
     "more": "Khác",
     "saving": "Đang lưu...",
     "reorderFailed": "Sắp xếp thất bại",
-    "project": "Dự án"
+    "project": "Dự án",
+    "username": "Tên đăng nhập",
+    "email": "Email",
+    "noResultsFound": "Không tìm thấy kết quả cho",
+    "selectServer": "Vui lòng chọn máy chủ để xem cổng.",
+    "confirmDelete": "Bạn có chắc chắn không?",
+    "autoRefresh": "Tự động làm mới"
   },
   "auth": {
     "login": "Đăng nhập",
     "logout": "Đăng xuất",
     "logoutConfirm": "Bạn có chắc chắn muốn đăng xuất?",
     "username": "Tên đăng nhập",
+    "email": "Email",
     "password": "Mật khẩu",
     "confirmPassword": "Xác nhận mật khẩu",
     "emailOrUsername": "Email hoặc tên đăng nhập",
@@ -139,7 +167,11 @@
     "passwordMismatch": "Mật khẩu không khớp",
     "passwordTooShort": "Mật khẩu phải có ít nhất 6 ký tự",
     "noAccount": "Chưa có tài khoản?",
-    "haveAccount": "Đã có tài khoản?"
+    "haveAccount": "Đã có tài khoản?",
+    "twoFactorVerification": "Xác thực hai yếu tố",
+    "enterTwoFactorCode": "Nhập mã gồm 6 chữ số từ ứng dụng xác thực của bạn.",
+    "twoFactorCode": "Mã xác thực 2FA",
+    "verify": "Xác minh"
   },
   "dashboard": {
     "title": "Bảng điều khiển",
@@ -173,12 +205,15 @@
     "clipboardError": "Không thể đọc clipboard",
     "deleteWarning": "Hành động này không thể hoàn tác. Tất cả các dự án liên quan có thể ngừng hoạt động.",
     "serverInfo": "Thông tin máy chủ",
+    "notFound": "Không tìm thấy máy chủ",
     "updated": "Cập nhật máy chủ thành công!",
+    "updateFailed": "Cập nhật thất bại",
     "added": "Thêm máy chủ thành công!",
     "deleted": "Đã xóa máy chủ!",
     "deleteFailed": "Xóa máy chủ thất bại",
     "testSuccess": "Kết nối thành công! 🎉",
     "testFailed": "Kết nối thất bại:",
+    "testError": "Kiểm tra thất bại",
     "statsFailed": "Không thể lấy thông số:",
     "host": "Máy chủ",
     "port": "Cổng",
@@ -210,7 +245,10 @@
     "dashboard": "Bảng điều khiển",
     "username": "Tên đăng nhập",
     "password": "Mật khẩu",
-    "privateKey": "Private Key"
+    "privateKey": "Private Key",
+    "add": "Thêm Máy chủ",
+    "connecting": "Đang kết nối...",
+    "addAndConnect": "Thêm & Kết nối"
   },
   "users": {
     "title": "Quản lý người dùng",
@@ -308,7 +346,25 @@
     "deployPath": "Đường dẫn deploy",
     "autoDeploy": "Tự động deploy",
     "commands": "Lệnh",
-    "envVars": "Biến môi trường"
+    "envVars": "Biến môi trường",
+    "monitoring": "Giám sát Uptime",
+    "monitoringDesc": "Định kỳ gọi đến ứng dụng và nhận thông báo qua Slack/Discord nếu ứng dụng ngừng hoạt động.",
+    "monitoringProBadge": "Tính Năng PRO",
+    "enableMonitoring": "Bật giám sát",
+    "pingUrl": "URL Giám sát (Ví dụ: /health)",
+    "pingUrlHint": "VD: https://api.myproject.com/health",
+    "pingInterval": "Tần suất kiểm tra",
+    "intervalOptions": {
+      "30": "Mỗi 30 giây",
+      "60": "Mỗi 1 phút",
+      "300": "Mỗi 5 phút"
+    },
+    "pingStatus": "Trạng thái",
+    "statusOnline": "Trực tuyến",
+    "statusOffline": "Ngoại tuyến",
+    "statusUnknown": "Không rõ",
+    "lastChecked": "Kiểm tra lần cuối",
+    "add": "Thêm Dự án"
   },
   "deploy": {
     "confirmTitle": "🚀 Xác nhận triển khai",
@@ -344,7 +400,6 @@
     "noActivity": "Chưa có hoạt động nào",
     "noActivitySubtitle": "Các hành động sẽ xuất hiện ở đây khi bạn sử dụng hệ thống"
   },
-
   "settings": {
     "title": "Cài đặt",
     "profile": "Hồ sơ",
@@ -361,10 +416,24 @@
     "startCommand": "Lệnh khởi động",
     "stopCommand": "Lệnh dừng",
     "notifications": "Thông báo",
-    "discordWebhook": "URL Discord Webhook",
     "notifyOnSuccess": "Thông báo khi thành công",
     "notifyOnFailure": "Thông báo khi thất bại",
     "saveSettings": "Lưu cài đặt",
+    "twoFactorAuth": "Xác thực hai yếu tố (2FA)",
+    "twoFactorDesc": "Bảo vệ tài khoản của bạn bằng mã xác thực 2FA.",
+    "enable2fa": "Bật 2FA",
+    "disable2fa": "Tắt 2FA",
+    "twoFactorEnabled": "Đã bật 2FA",
+    "twoFactorDisabled": "Đã tắt 2FA",
+    "setup2fa": "Thiết lập 2FA",
+    "scanQrCode": "1. Quét mã QR dưới đây bằng Ứng dụng xác thực của bạn (Google Authenticator, Authy, v.v.).",
+    "cantScanQr": "Không thể quét mã QR?",
+    "enterKeyManually": "Nhập khóa này theo cách thủ công:",
+    "verify2faCode": "2. Nhập mã gồm 6 chữ số từ ứng dụng để xác minh.",
+    "cancelSetup": "Hủy",
+    "verifyAndEnable": "Xác minh & Bật",
+    "enterPasswordToDisable": "Nhập mật khẩu của bạn để tắt 2FA",
+    "confirmDisable": "Xác nhận tắt",
     "appearance": "Giao diện",
     "sidebarPosition": "Vị trí Sidebar",
     "positions": {
@@ -415,7 +484,6 @@
     },
     "gitPolling": "Git Polling",
     "pollingDesc": "Hệ thống nên kiểm tra commit mới bao lâu một lần cho các dự án tự động deploy?",
-
     "intervals": {
       "30s": "Mỗi 30 giây",
       "1m": "Mỗi 1 phút",
@@ -431,7 +499,16 @@
     "githubDisconnected": "Đã ngắt kết nối GitHub thành công",
     "githubDisconnectTitle": "Ngắt kết nối GitHub",
     "githubDisconnectConfirm": "Bạn có chắc chắn muốn ngắt kết nối tài khoản GitHub không?",
-    "githubDisconnectWarning": "Bạn sẽ cần kết nối lại để nhập repository hoặc sử dụng tính năng tự động deploy."
+    "githubDisconnectWarning": "Bạn sẽ cần kết nối lại để nhập repository hoặc sử dụng tính năng tự động deploy.",
+    "alerts": "Thông Báo Webhooks",
+    "alertsTitle": "Deployment Webhooks",
+    "alertsDesc": "Nhận thông báo qua Slack và Discord mỗi khi deploy thành công hoặc thất bại.",
+    "alertsProBadge": "Tính Năng PRO",
+    "slackWebhook": "Webhook URL của Slack",
+    "slackWebhookHint": "Lấy từ phần Integrations của Slack channel",
+    "discordWebhook": "Webhook URL của Discord",
+    "discordWebhookHint": "Lấy từ phần Integrations > Webhooks của kênh Discord",
+    "enterTwoFactorCode": "Vui lòng nhập mã xác minh"
   },
   "nginx": {
     "title": "Quản lý cấu hình Nginx",
@@ -483,6 +560,20 @@
       "errored": "Lỗi",
       "launching": "Đang khởi chạy"
     }
+  },
+  "docker": {
+    "pullHelper": "Nhập tên image từ Docker Hub (ví dụ: ubuntu:20.04) hoặc public registry URL (ví dụ: ghcr.io/user/image:tag).",
+    "notInstalled": "Docker chưa được cài đặt trên máy chủ này",
+    "title": "Quản lý Docker",
+    "subtitle": "Quản lý container và image Docker",
+    "pullImage": "Kéo Image",
+    "containers": "Containers",
+    "images": "Images",
+    "noContainers": "Không tìm thấy container nào",
+    "noImages": "Không tìm thấy image nào",
+    "imageName": "Tên Image",
+    "pulling": "Đang kéo...",
+    "pull": "Kéo"
   },
   "notFound": {
     "title": "Không tìm thấy trang",
@@ -649,6 +740,406 @@
   },
   "ports": {
     "title": "Quản lý Cổng",
-    "subtitle": "Quản lý cổng mở và tường lửa trên {{server}}"
+    "subtitle": "Quản lý cổng mở và tường lửa trên {{server}}",
+    "showingCount": "Hiển thị {{count}} cổng",
+    "fetchFailed": "Lỗi lấy danh sách cổng",
+    "killSuccess": "Đã huỷ tiến trình thành công",
+    "killFailed": "Lỗi huỷ tiến trình",
+    "totalOpen": "Tổng số Cổng",
+    "protocol": "Giao thức",
+    "command": "Lệnh",
+    "user": "Người dùng",
+    "proto": "Giao thức",
+    "address": "Địa chỉ (Tên)",
+    "noPortsFound": "Không tìm thấy cổng phù hợp.",
+    "killProcess": "Huỷ Tiến trình",
+    "confirmKill": "Xác nhận Huỷ",
+    "killCTA": "Huỷ Tiến trình"
+  },
+  "timeMachine": {
+    "noSnapshots": "Không có điểm chụp lịch sử nào. Hệ thống sẽ tự động lưu mỗi 5 phút.",
+    "title": "Cỗ máy Thời gian",
+    "subtitle": "Kéo về quá khứ để điều tra các đợt tăng CPU/RAM và tiến trình bị lỗi.",
+    "time": "Thời gian:",
+    "systemUsage": "Sử dụng Hệ thống",
+    "cpuUsage": "Sử dụng CPU",
+    "memoryUsage": "Sử dụng RAM",
+    "networkConnections": "Kết nối Mạng",
+    "established": "Đã thiết lập:",
+    "timeWait": "Chờ (TimeWait):",
+    "topProcesses": "Top 10 Tiến trình (Theo CPU)",
+    "systemLogsAt": "Nhật ký hệ thống vào đúng",
+    "noLogsFound": "Không tìm thấy nhật ký..."
+  },
+  "security": {
+    "tabTitle": "Bảo mật & Tuân thủ",
+    "title": "Trợ lý Bảo mật (Compliance Autopilot)",
+    "subtitle": "Hệ thống quét bảo mật tự động cho máy chủ của bạn.",
+    "runScan": "Bắt đầu Quét Bảo Rủi Ro",
+    "scanning": "Đang quét...",
+    "scanningProgress": "Đang quét bảo mật...",
+    "fetchFailed": "Lỗi khi tải lịch sử quét",
+    "scanSuccess": "Quét hoàn tất thành công!",
+    "scanFailed": "Lỗi khi quét bảo mật",
+    "scanResults": "Kết quả Quét",
+    "clickToExpand": "bấm vào mục để xem chi tiết",
+    "moreIssues": "lỗi khác...",
+    "passed": "đạt",
+    "downloadPdfFailed": "Lỗi khi tải báo cáo PDF",
+    "noScans": "Chưa có lượt quét bảo mật nào",
+    "noScansSubtitle": "Hãy thực hiện một lượt quét để đánh giá mức độ an toàn của máy chủ. Trợ lý sẽ tìm kiếm các cổng mở, cấu hình SSH kém, và các gói phần mềm lỗi thời.",
+    "runFirstScan": "Thực hiện lần quét đầu tiên",
+    "overallScore": "Điểm Đánh Giá",
+    "lastScanned": "Lần quét mới nhất",
+    "issues": "Lỗ hổng phát hiện",
+    "noIssuesFound": "Tuyệt vời! Không phát hiện lỗ hổng bảo mật.",
+    "passedChecks": "Kiểm tra Đạt (An Toàn)",
+    "scanHistory": "Lịch sử Quét",
+    "score": "Điểm số",
+    "issuesCount": "Lỗ hổng",
+    "downloadPdf": "Tải xuống báo cáo PDF",
+    "autoFix": "Tự động Vá",
+    "fixNow": "Khắc phục Ngay",
+    "autoRemediateTitle": "Tự động Khắc phục",
+    "whatWillHappen": "Hệ thống sẽ thực hiện:",
+    "fixWarning": "Tính năng này sẽ thực thi các lệnh trên server của bạn. Hãy đảm bảo bạn đã sao lưu dữ liệu.",
+    "confirmFix": "Áp dụng Vá Lỗi",
+    "fixSuccess": "Khắc phục thành công! Hãy quét lại để xác nhận."
+  },
+  "landing": {
+    "nav": {
+      "dashboard": "Bảng Điều Khiển",
+      "login": "Đăng Nhập",
+      "register": "Bắt Đầu"
+    },
+    "hero": {
+      "title": "Deploy Mọi Thứ. Mọi Nơi. Tức Thì.",
+      "subtitle": "Pulse là nền tảng quản lý máy chủ tối ưu. Tự động hóa triển khai, quản lý CSDL, NGINX, PM2, và quét bảo mật trên VPS của bạn - tất cả từ một giao diện cực kỳ hiện đại.",
+      "cta": {
+        "start": "Bắt Đầu Miễn Phí",
+        "dashboard": "Đến Bảng Điều Khiển",
+        "learnMore": "Xem Cách Hoạt Động"
+      },
+      "terminal": {
+        "line1": "$ git push origin main",
+        "line2": "Đang tìm kiếm thay đổi... 🔍",
+        "line3": "Đang build project...",
+        "line4": "Đã tạo container 83b27fe 📦",
+        "line5": "Triển khai lên production 🚀",
+        "line6": "Thành công! Đang chạy tại https://pulse.domain"
+      }
+    },
+    "techStack": {
+      "title": "Hỗ trợ các công nghệ hàng đầu."
+    },
+    "features": {
+      "title": "Mọi công cụ bạn cần để ra mắt nhanh hơn",
+      "subtitle": "Một bộ công cụ mạnh mẽ dành cho các nhà phát triển và DevOps hiện đại.",
+      "deploy": {
+        "title": "Triển Khai Tự Động Kích Hoạt",
+        "desc": "Kết nối GitHub và tự động cập nhật khi bạn push code. Không còn việc kéo thả file FTP thủ công."
+      },
+      "nginx": {
+        "title": "Định Tuyến NGINX Mượt Mà",
+        "desc": "Quản lý reverse proxy, gán tên miền và cài đặt chứng chỉ SSL ngay lập tức qua giao diện."
+      },
+      "database": {
+        "title": "Trạm Quản Lý Cơ Sở Dữ Liệu",
+        "desc": "Sao lưu an toàn và duyệt các container cơ sở dữ liệu (MySQL, Postgres, Redis) chỉ với một cái nhấn chuột."
+      },
+      "security": {
+        "title": "Trợ Lý An Ninh",
+        "desc": "Tự động rà soát máy chủ để quét mã lỗi thời, cổng hở, và đưa ra giải pháp bảo vệ tối đa."
+      },
+      "monitor": {
+        "title": "Thông Số Thời Gian Thực",
+        "desc": "Số liệu CPU máy chủ, mức tiêu thụ tài nguyên RAM, gửi thẳng đến trình duyệt thông qua WebSocket siêu nhanh."
+      },
+      "ci": {
+        "title": "Quản Lý Cron & PM2",
+        "desc": "Tích hợp quản lý vòng đời ứng dụng Node.JS, Python, Go và lập lịch công việc tự động."
+      },
+      "vpn": {
+        "title": "Mạng riêng ảo Mesh VPN",
+        "desc": "Triển khai đường hầm VPN zero-config, siêu tốc để kết nối tất cả máy chủ và đồng đội trên toàn cầu."
+      },
+      "logs": {
+        "title": "Trình duyệt Log Tập Trung",
+        "desc": "Theo dõi log theo thời gian thực từ Docker, PM2 và hệ thống trên tất cả các server từ một bảng điều khiển duy nhất."
+      },
+      "testrunner": {
+        "title": "Test Runner Trước Triển Khai",
+        "desc": "Phát hiện lỗi trước khi lên production. Tự động chạy toàn bộ các bài test trước mỗi lần deploy."
+      },
+      "pipeline": {
+        "title": "CI/CD Pipelines Nâng Cao",
+        "desc": "Xây dựng các luồng triển khai nhiều giai đoạn, quản lý phê duyệt và thực hiện Blue-Green/Canary không gián đoạn."
+      },
+      "map": {
+        "title": "Bản Đồ Hạ Tầng Tương Tác",
+        "desc": "Trực quan hóa toàn bộ hệ thống máy chủ và ứng dụng bằng sơ đồ mạng lưới thời gian thực tuyệt đẹp."
+      },
+      "command": {
+        "title": "Command Palette Toàn Cầu",
+        "desc": "Điều hướng với tốc độ ý nghĩ. Nhấn Ctrl+K để nhảy đến bất kỳ máy chủ, dự án hoặc cài đặt nào ngay lập tức."
+      }
+    },
+    "steps": {
+      "title": "Từ Code Lên Production Vài Phút",
+      "step1": {
+        "title": "1. Thêm Máy Chủ (VPS)",
+        "desc": "Cung cấp quyền truy cập bằng kết nối SSH mã hóa an toàn cao."
+      },
+      "step2": {
+        "title": "2. Liên Kết Mã Nguồn",
+        "desc": "Trỏ project đến repository GitHub hoặc GitLab của bạn."
+      },
+      "step3": {
+        "title": "3. Tự Động Triển Khai",
+        "desc": "Mọi thao tác build, reload PM2 hoặc khởi tạo Docker đều hoàn toàn tự động."
+      }
+    },
+    "faq": {
+      "title": "Câu Hỏi Thường Gặp",
+      "q1": "Mã nguồn và dữ liệu của tôi được lưu ở đâu?",
+      "a1": "Chúng tôi sử dụng kết nối SSH trực tiếp. Bộ mã nguồn, dữ liệu database, file ứng dụng không bao giờ rời khỏi server của bạn.",
+      "q2": "Hệ thống có tương thích với framework tôi đang dùng không?",
+      "a2": "Có! Pulse rất linh hoạt. Cho dù bạn dùng Next.js, Django, Laravel hay Spring Boot, nếu nó chạy được trên Linux, chúng tôi hỗ trợ nó.",
+      "q3": "Tôi có cần cài đặt thêm phần mềm vào máy chủ không?",
+      "a3": "Không. Pulse hoạt động hoàn toàn dựa trên giao thức kết nối SSH tiêu chuẩn có sẵn trên hệ điều hành Linux.",
+      "q4": "Tính năng mạng riêng ảo VPN hoạt động như thế nào?",
+      "a4": "Pulse sử dụng WireGuard để tạo một mạng nội bộ ảo siêu tốc độ và bảo mật giữa các máy chủ. Các ứng dụng có thể giao tiếp nội bộ an toàn mà không cần mở port ra ngoài Internet.",
+      "q5": "Tôi có thể xem log mà không cần truy cập console không?",
+      "a5": "Chắc chắn rồi! Tính năng Trình duyệt Log Tập Trung sẽ lấy log theo thời gian thực từ Docker, PM2, Nginx và log hệ thống truyền thẳng đến trình duyệt của bạn.",
+      "q6": "Có giới hạn số lượng dự án tôi có thể triển khai không?",
+      "a6": "Bạn có thể triển khai không giới hạn số dự án trên máy chủ của bạn. Pulse không thu phí dựa trên số lượng mã nguồn được chạy."
+    },
+    "bottomCta": {
+      "title": "Sẵn sàng làm chủ máy chủ của bạn?",
+      "subtitle": "Gia nhập cộng đồng các lập trình viên trên toàn cầu đang phát triển ứng dụng nhanh hơn và quản lý an toàn hơn với Pulse.",
+      "button": "Bắt Đầu Triển Khai Ngay"
+    },
+    "teams": {
+      "title": "Cài đặt nhóm",
+      "createTeam": "Tạo nhóm mới",
+      "switchTeam": "Đổi nhóm",
+      "inviteMember": "Mời thành viên",
+      "role": "Vai trò",
+      "admin": "Quản trị viên",
+      "editor": "Người chỉnh sửa",
+      "viewer": "Người xem",
+      "personalWorkspace": "Không gian cá nhân"
+    }
+  },
+  "dockerManager": {
+    "ports": "Cổng",
+    "cPU": "CPU",
+    "mEM": "MEM",
+    "size": "Kích thước",
+    "iD": "ID",
+    "logs": "📋 Nhật ký:",
+    "inspect": "🔍 Xem chi tiết:",
+    "runContainer": "Chạy Container:",
+    "portMappings": "Bản đồ Mạng (Ports)",
+    "addPort": "+ Thêm cổng",
+    "environmentVariables": "Biến môi trường",
+    "addEnvVar": "+ Thêm biến",
+    "cancel": "Hủy",
+    "run": "Chạy"
+  },
+  "infrastructureMap": {
+    "onlineRunning": "Trực tuyến/Đang chạy",
+    "offlineStopped": "Ngoại tuyến/Đã dừng",
+    "deploying": "Đang triển khai",
+    "branch": "Nhánh:",
+    "clickToViewDetails": "Nhấn để xem chi tiết →"
+  },
+  "analytics": {
+    "last7Days": "7 ngày qua",
+    "last14Days": "14 ngày qua",
+    "last30Days": "30 ngày qua",
+    "last60Days": "60 ngày qua",
+    "last90Days": "90 ngày qua",
+    "deployTrends": "📈 Xu hướng Triển khai",
+    "activityHeatmap": "🗓️ Biểu đồ Hoạt động",
+    "h": "g",
+    "topProjects": "🏆 Dự án Hàng đầu",
+    "noDeploymentData": "Không có dữ liệu",
+    "title": "Bảng phân tích",
+    "subtitle": "Chỉ số DORA & Thông tin Triển khai"
+  },
+  "globalBandwidth": {
+    "lifetime": "(Lũy kế)"
+  },
+  "logStudio": {
+    "logStudio": "Trình duyệt Log",
+    "centralizedRealtimeLogViewer": "Trình xem log tập trung thời gian thực",
+    "serviceType": "Loại Dịch vụ",
+    "noTargetsFound": "Không tìm thấy mục tiêu",
+    "startStream": "Bắt đầu Stream",
+    "stopStream": "Dừng Stream",
+    "clear": "Xóa"
+  },
+  "approvalCenter": {
+    "project": "Dự án",
+    "reviewedBy": "Người duyệt",
+    "newApprovalRequest": "Yêu cầu Phê duyệt mới",
+    "deploy": "Triển khai",
+    "configChange": "Thay đổi Cấu hình",
+    "rollback": "Khôi phục",
+    "delete": "Xóa",
+    "noProjectsAvailable": "Không có dự án",
+    "cancel": "Hủy",
+    "create": "Tạo"
+  },
+  "secretVault": {
+    "allTypes": "Tất cả",
+    "env": "🔧 Môi trường",
+    "key": "🔑 Khóa",
+    "token": "🎫 Token",
+    "password": "🔐 Mật khẩu",
+    "cert": "📜 Chứng chỉ",
+    "other": "📦 Khác",
+    "addSecret": "Thêm Bí mật",
+    "addEncryptedSecretsLike": "Thêm bí mật được mã hóa như API key, token và mật khẩu.",
+    "environmentVariable": "🔧 Biến Môi trường",
+    "aPIKey": "🔑 Khóa API",
+    "certificate": "📜 Chứng chỉ",
+    "cancel": "Hủy",
+    "encryptSave": "Mã hóa & Lưu"
+  },
+  "webhookDebugger": {
+    "loadLogs": "Tải Nhật ký",
+    "testPing": "Thử Ping",
+    "clear": "Xóa",
+    "headers": "Headers",
+    "body": "Nội dung"
+  },
+  "testRunner": {
+    "history": "Lịch sử",
+    "selectAProjectAnd": "Chọn dự án và chạy kiểm tra",
+    "checksDirectoryGitDisk": "Kiểm tra: Thư mục, git, ổ đĩa, node, module, cổng, ram, npm test",
+    "ms": "ms",
+    "runHistory": "Lịch sử Chạy",
+    "noHistoryFoundFor": "Không tìm thấy lịch sử",
+    "testRunDetails": "Chi tiết chạy",
+    "title": "Kiểm tra trước Triển khai",
+    "subtitle": "Chạy các bài kiểm tra trước khi triển khai",
+    "historyError": "Không thể tải lịch sử",
+    "checksPassed": "Tất cả kiểm tra đều đạt! Sẵn sàng triển khai.",
+    "checksFailed": "Một số kiểm tra thất bại. Vui lòng xem lại trước khi triển khai.",
+    "runFailed": "Chạy kiểm tra thất bại",
+    "selectProject": "Chọn dự án",
+    "running": "Đang chạy...",
+    "runTests": "Chạy kiểm tra",
+    "readyToDeploy": "Sẵn sàng Triển khai",
+    "notReady": "Chưa sẵn sàng",
+    "passed": "Đạt",
+    "failed": "Thất bại",
+    "skipped": "Bỏ qua",
+    "success": "Thành công",
+    "passedCount": "Đạt"
+  },
+  "pipelineBuilder": {
+    "createPipeline": "Tạo Pipeline",
+    "noPipelinesDefined": "Chưa có pipeline",
+    "youHaventCreatedAny": "Bạn chưa có quy trình triển khai nào.",
+    "createYourFirstPipeline": "Tạo pipeline đầu tiên",
+    "workflowSteps": "Các bước",
+    "coreSettings": "Cài đặt Chung",
+    "noProjectsFound": "Không có dự án",
+    "workflowStepsSequence": "Trình tự Thực hiện",
+    "addStep": "Thêm Bước",
+    "noStepsAddedYour": "Chưa có bước nào. Pipeline của bạn không làm gì cả.",
+    "bashCommand": "⚡ Lệnh Bash",
+    "runTests": "🧪 Chạy Kiểm tra",
+    "triggerDeploy": "🚀 Kích hoạt Triển khai",
+    "manualApproval": "✅ Phê duyệt Thủ công",
+    "notification": "🔔 Thông báo",
+    "cancel": "Hủy",
+    "pipelineExecutionOutput": "Đầu ra Thực thi Pipeline",
+    "ms": "ms"
+  },
+  "vpnManager": {
+    "51820UDP": "51820 UDP",
+    "rx": "(Nhận)",
+    "tx": "(Gửi)",
+    "mB": "(MB)",
+    "noBandwidthDataAvailable": "Không có dữ liệu băng thông."
+  },
+  "navigation": {
+    "dashboard": "Bảng điều khiển",
+    "servers": "Nhóm máy chủ",
+    "projects": "Dự án",
+    "infrastructureMap": "Bản đồ hạ tầng",
+    "vpnManager": "Quản lý VPN",
+    "secretVault": "Kho bí mật",
+    "dockerManager": "Quản lý Docker",
+    "databaseManager": "Studio Cơ sở dữ liệu",
+    "pipelineBuilder": "CI/CD Pipelines",
+    "settings": "Cài đặt"
+  },
+  "pricing": {
+    "title": "Bảng giá Đơn giản, Rõ ràng",
+    "mostPopular": "Phổ biến nhất"
+  },
+  "approvals": {
+    "title": "Trung tâm phê duyệt",
+    "newRequest": "Yêu cầu mới",
+    "noApprovals": "Không có yêu cầu phê duyệt"
+  },
+  "bandwidth": {
+    "downloadSpeed": "Tốc độ tải xuống",
+    "uploadSpeed": "Tốc độ Tải lên",
+    "download": "Tải xuống",
+    "upload": "Tải lên (Tx)",
+    "totalDownload": "Tổng Tải xuống",
+    "totalUpload": "Tổng Tải lên",
+    "networkSpeed": "Tốc độ mạng (Giờ qua)"
+  },
+  "infra": {
+    "noData": "Không có dữ liệu hạ tầng",
+    "title": "Bản đồ hạ tầng"
+  },
+  "pipelines": {
+    "title": "Trình tạo Pipeline",
+    "count": "pipelines"
+  },
+  "secrets": {
+    "title": "Kho bí mật",
+    "subtitle": "Quản lý bí mật mã hóa AES-256",
+    "noSecrets": "Không có bí mật được lưu trữ"
+  },
+  "vpn": {
+    "downloadConfig": "Tải Cấu hình",
+    "viewQr": "Xem mã QR",
+    "actionSuccess": "Hành động thành công",
+    "clientCreated": "Đã tạo Client",
+    "clientDeleted": "Đã xóa Client",
+    "selectServer": "Chọn máy chủ để quản lý VPN",
+    "title": "Quản lý VPN",
+    "subtitle": "Biến VPS thành VPN WireGuard cá nhân",
+    "stop": "Dừng",
+    "start": "Bắt đầu",
+    "uninstall": "Gỡ cài đặt",
+    "installNow": "Cài đặt VPN Server",
+    "status": "Trạng thái",
+    "serverIp": "IP Máy chủ",
+    "port": "Cổng WireGuard",
+    "totalClients": "Clients",
+    "clientsList": "Danh sách thiết bị",
+    "addClient": "Thêm Client",
+    "topClients": "Top 5 Client sử dụng",
+    "configureInstall": "Cấu hình VPN Server",
+    "hostLabel": "Máy chủ (IP hoặc Tên miền)",
+    "wgPortLabel": "Cổng WireGuard (UDP)",
+    "apiPortLabel": "Cổng quản lý (TCP)",
+    "defaultAddress": "Dải IP Client",
+    "allowedIps": "IP cho phép",
+    "scanQr": "Quét mã này với ứng dụng WireGuard để kết nối"
+  },
+  "webhookDebug": {
+    "title": "Webhook Debugger",
+    "subtitle": "Kiểm tra sự kiện webhook"
   }
 }

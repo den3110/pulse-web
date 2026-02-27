@@ -28,7 +28,7 @@ const ThemeContext = createContext<ThemeContextType>({
   toggleTheme: () => {},
   sidebarPosition: "left",
   setSidebarPosition: () => {},
-  primaryColor: "#6366f1",
+  primaryColor: "#f97316",
   setPrimaryColor: () => {},
   mobileLayout: "drawer",
   setMobileLayout: () => {},
@@ -52,7 +52,7 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const [primaryColor, setPrimaryColor] = useState<string>(() => {
-    return localStorage.getItem("primaryColor") || "#6366f1";
+    return localStorage.getItem("primaryColor") || "#f97316";
   });
 
   const [mobileLayout, setMobileLayout] = useState<MobileLayout>(() => {

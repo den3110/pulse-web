@@ -32,6 +32,7 @@ import FolderIcon from "@mui/icons-material/Folder";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
+import SearchIcon from "@mui/icons-material/Search";
 import MenuIcon from "@mui/icons-material/Menu";
 import LanguageIcon from "@mui/icons-material/Language";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
@@ -43,14 +44,28 @@ import StorageIcon from "@mui/icons-material/Storage";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import SnippetFolderIcon from "@mui/icons-material/SnippetFolder";
 import LanIcon from "@mui/icons-material/Lan";
+import ViewInArIcon from "@mui/icons-material/ViewInAr";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import NetworkCheckIcon from "@mui/icons-material/NetworkCheck";
+import GppGoodIcon from "@mui/icons-material/GppGood";
+import VpnKeyIcon from "@mui/icons-material/VpnKey";
+import VpnLockIcon from "@mui/icons-material/VpnLock";
+import WebhookIcon from "@mui/icons-material/Webhook";
+import ScienceIcon from "@mui/icons-material/Science";
+import LinearScaleIcon from "@mui/icons-material/LinearScale";
+import SubjectIcon from "@mui/icons-material/Subject";
 import NotificationCenter from "./NotificationCenter";
+import AIChatOverlay from "./AIChatOverlay";
 import { useThemeMode } from "../contexts/ThemeContext";
 import ServerSelector from "./ServerSelector";
+import TeamSwitcher from "./TeamSwitcher";
+import CommandPalette from "./CommandPalette";
 
 const DRAWER_WIDTH = 260;
 
 const navItems = [
-  { labelKey: "nav.dashboard", icon: <DashboardIcon />, path: "/" },
+  { labelKey: "nav.dashboard", icon: <DashboardIcon />, path: "/dashboard" },
   { labelKey: "nav.servers", icon: <DnsIcon />, path: "/servers" },
   { labelKey: "nav.projects", icon: <FolderIcon />, path: "/projects" },
   { labelKey: "nav.nginx", icon: <LanguageIcon />, path: "/nginx" },
@@ -59,6 +74,25 @@ const navItems = [
   { labelKey: "nav.ports", icon: <LanIcon />, path: "/ports" },
   { labelKey: "nav.cron", icon: <AccessTimeIcon />, path: "/cron" },
   { labelKey: "nav.database", icon: <StorageIcon />, path: "/database" },
+  { labelKey: "nav.docker", icon: <ViewInArIcon />, path: "/docker" },
+  {
+    labelKey: "nav.infrastructure",
+    icon: <AccountTreeIcon />,
+    path: "/infrastructure",
+  },
+  { labelKey: "nav.analytics", icon: <BarChartIcon />, path: "/analytics" },
+  { labelKey: "nav.bandwidth", icon: <NetworkCheckIcon />, path: "/bandwidth" },
+  { labelKey: "nav.logs", icon: <SubjectIcon />, path: "/logs" },
+  { labelKey: "nav.approvals", icon: <GppGoodIcon />, path: "/approvals" },
+  { labelKey: "nav.secrets", icon: <VpnKeyIcon />, path: "/secrets" },
+  {
+    labelKey: "nav.webhookDebug",
+    icon: <WebhookIcon />,
+    path: "/webhook-debug",
+  },
+  { labelKey: "nav.testRunner", icon: <ScienceIcon />, path: "/test-runner" },
+  { labelKey: "nav.pipelines", icon: <LinearScaleIcon />, path: "/pipelines" },
+  { labelKey: "nav.vpn", icon: <VpnLockIcon />, path: "/vpn" },
   { labelKey: "nav.activity", icon: <HistoryIcon />, path: "/activity" },
   { labelKey: "nav.users", icon: <PeopleIcon />, path: "/users" },
   { labelKey: "nav.settings", icon: <SettingsIcon />, path: "/settings" },
@@ -70,6 +104,7 @@ const Layout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const { mode, toggleTheme, sidebarPosition, mobileLayout } = useThemeMode();
   const isDark = mode === "dark";
   const { i18n, t } = useTranslation();
@@ -80,6 +115,18 @@ const Layout: React.FC = () => {
     i18n.changeLanguage(next);
     localStorage.setItem("lang", next);
   };
+
+  // Listen for Ctrl+K or Cmd+K to open Command Palette
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setCommandPaletteOpen((open) => !open);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
 
   const getPageTitle = () => {
     const item = navItems.find((n) => n.path === location.pathname);
@@ -143,7 +190,7 @@ const Layout: React.FC = () => {
               borderRadius: 2.5,
               mb: 0.5,
               "&.Mui-selected": {
-                bgcolor: "rgba(99, 102, 241, 0.15)",
+                bgcolor: "var(--primary-main-15)",
                 color: "primary.light",
                 "& .MuiListItemIcon-root": { color: "primary.light" },
               },
@@ -301,7 +348,8 @@ const Layout: React.FC = () => {
     <Box
       sx={{
         display: "flex",
-        minHeight: "100vh",
+        height: "100vh",
+        overflow: "hidden",
         flexDirection: sidebarPosition === "right" ? "row-reverse" : "row",
       }}
     >
@@ -354,7 +402,9 @@ const Layout: React.FC = () => {
         sx={{
           flex: 1,
           minWidth: 0,
-          overflowX: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
           ml: {
             md: sidebarPosition === "left" ? `${DRAWER_WIDTH}px` : 0,
           },
@@ -394,6 +444,46 @@ const Layout: React.FC = () => {
             <Typography variant="h6" noWrap sx={{ flex: 1, fontSize: 20 }}>
               {getPageTitle()}
             </Typography>
+
+            {/* Hint for search */}
+            <Tooltip title="Search Apps & Tools (Ctrl + K)">
+              <Button
+                size="small"
+                onClick={() => setCommandPaletteOpen(true)}
+                sx={{
+                  display: { xs: "none", sm: "flex" },
+                  textTransform: "none",
+                  color: "text.secondary",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  mr: 2,
+                  bgcolor: isDark
+                    ? "rgba(255,255,255,0.03)"
+                    : "rgba(0,0,0,0.03)",
+                  "&:hover": { bgcolor: "action.hover" },
+                }}
+              >
+                <SearchIcon fontSize="small" sx={{ mr: 0.5 }} />
+                <Typography variant="body2" sx={{ opacity: 0.7, mr: 1 }}>
+                  Search...
+                </Typography>
+                <Box
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    px: 0.5,
+                    fontSize: 10,
+                    bgcolor: "background.paper",
+                  }}
+                >
+                  Ctrl K
+                </Box>
+              </Button>
+            </Tooltip>
+
+            {/* Team Switcher */}
+            <TeamSwitcher />
 
             {/* Server Selector */}
             <ServerSelector />
@@ -435,11 +525,25 @@ const Layout: React.FC = () => {
 
         <Box
           component="main"
-          sx={{ p: { xs: 2, md: 4 }, mt: 8, overflow: "visible" }}
+          sx={{
+            p: { xs: 2, md: 4 },
+            mt: 8,
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "auto",
+            minHeight: 0,
+          }}
         >
           <Outlet />
         </Box>
       </Box>
+
+      {/* Command Palette Overlay */}
+      <CommandPalette
+        open={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+      />
 
       {/* Mobile Bottom Navigation */}
       {mobileLayout === "bottom" && (
@@ -581,6 +685,7 @@ const Layout: React.FC = () => {
       </Drawer>
 
       {logoutDialog}
+      <AIChatOverlay />
     </Box>
   );
 };

@@ -47,6 +47,7 @@ interface Project {
   status: string;
   autoDeploy: boolean;
   processManager: "nohup" | "pm2";
+  environment?: "node" | "python" | "static" | "docker-compose";
   lastDeployedAt?: string;
   envVars?: Record<string, string>;
 }

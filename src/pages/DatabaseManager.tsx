@@ -37,8 +37,12 @@ import RestoreIcon from "@mui/icons-material/Restore";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
 import TerminalIcon from "@mui/icons-material/Terminal";
+import AddIcon from "@mui/icons-material/Add";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PauseIcon from "@mui/icons-material/Pause";
 import { DatabaseStudio } from "../components/DatabaseStudio";
 
 interface DockerContainer {
@@ -56,11 +60,24 @@ interface BackupFile {
   date: string;
 }
 
+interface BackupSchedule {
+  _id: string;
+  containerId: string;
+  dbType: string;
+  dbName: string;
+  schedule: string;
+  retentionDays: number;
+  status: "active" | "paused";
+  lastRun?: string;
+  lastStatus?: "success" | "failed";
+}
+
 const DatabaseManager: React.FC = () => {
   const { selectedServer } = useServer();
   const { t } = useTranslation();
   const [containers, setContainers] = useState<DockerContainer[]>([]);
   const [backups, setBackups] = useState<BackupFile[]>([]);
+  const [schedules, setSchedules] = useState<BackupSchedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState(0);
 
@@ -71,13 +88,16 @@ const DatabaseManager: React.FC = () => {
 
   // Backup Dialog
   const [backupOpen, setBackupOpen] = useState(false);
+  const [isAutomatedBackup, setIsAutomatedBackup] = useState(false);
 
   const [selectedContainer, setSelectedContainer] =
     useState<DockerContainer | null>(null);
-  const [backupConfig, setBackupConfig] = useState({
+  const [backupConfig, setBackupConfig] = useState<any>({
     dbName: "",
     dbUser: "",
     dbPassword: "",
+    schedule: "0 0 * * *",
+    retentionDays: 7,
   });
   const [backingUp, setBackingUp] = useState(false);
 
@@ -93,10 +113,31 @@ const DatabaseManager: React.FC = () => {
   });
   const [restoring, setRestoring] = useState(false);
 
+  // Install Service Dialog
+  const [installOpen, setInstallOpen] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  const [installConfig, setInstallConfig] = useState({
+    serviceType: "postgres",
+    containerName: "",
+    dbUser: "",
+    dbPassword: "",
+  });
+
+  const generatePassword = () => {
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+    let password = "";
+    for (let i = 0; i < 16; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setInstallConfig((prev) => ({ ...prev, dbPassword: password }));
+  };
+
   useEffect(() => {
     if (selectedServer) {
       if (tab === 0) fetchContainers();
-      else fetchBackups();
+      else if (tab === 1) fetchBackups();
+      else if (tab === 2) fetchSchedules();
     }
   }, [selectedServer, tab]);
 
@@ -131,9 +172,31 @@ const DatabaseManager: React.FC = () => {
     }
   };
 
-  const handleBackupClick = (container: DockerContainer) => {
+  const fetchSchedules = async () => {
+    if (!selectedServer) return;
+    setLoading(true);
+    try {
+      const { data } = await api.get(
+        `/database/${selectedServer._id}/schedules`,
+      );
+      setSchedules(data);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to fetch schedules");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBackupClick = (container: DockerContainer, automated = false) => {
     setSelectedContainer(container);
-    setBackupConfig({ dbName: "", dbUser: "", dbPassword: "" });
+    setIsAutomatedBackup(automated);
+    setBackupConfig({
+      dbName: "",
+      dbUser: "",
+      dbPassword: "",
+      schedule: "0 0 * * *",
+      retentionDays: 7,
+    });
     setBackupOpen(true);
   };
 
@@ -146,18 +209,30 @@ const DatabaseManager: React.FC = () => {
     if (!selectedServer || !selectedContainer) return;
     setBackingUp(true);
     try {
-      const { data } = await api.post(
-        `/database/${selectedServer._id}/backup`,
-        {
+      if (isAutomatedBackup) {
+        await api.post(`/database/${selectedServer._id}/schedules`, {
           containerId: selectedContainer.id,
           dbType: selectedContainer.type,
           ...backupConfig,
-        },
-      );
-      toast.success(
-        `${t("database.backupCreated", "Backup created at")}: ${data.path}`,
-      );
-      setBackupOpen(false);
+        });
+        toast.success("Automated backup schedule created successfully");
+        setBackupOpen(false);
+        if (tab === 2) fetchSchedules();
+      } else {
+        const { data } = await api.post(
+          `/database/${selectedServer._id}/backup`,
+          {
+            containerId: selectedContainer.id,
+            dbType: selectedContainer.type,
+            ...backupConfig,
+          },
+        );
+        toast.success(
+          `${t("database.backupCreated", "Backup created at")}: ${data.path}`,
+        );
+        setBackupOpen(false);
+        if (tab === 1) fetchBackups();
+      }
     } catch (err: any) {
       toast.error(
         err.response?.data?.message ||
@@ -165,6 +240,34 @@ const DatabaseManager: React.FC = () => {
       );
     } finally {
       setBackingUp(false);
+    }
+  };
+
+  const handleToggleSchedule = async (
+    id: string,
+    currentStatus: "active" | "paused",
+  ) => {
+    if (!selectedServer) return;
+    try {
+      await api.put(`/database/${selectedServer._id}/schedules/${id}`, {
+        status: currentStatus === "active" ? "paused" : "active",
+      });
+      toast.success("Schedule status updated");
+      fetchSchedules();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update schedule");
+    }
+  };
+
+  const handleDeleteSchedule = async (id: string) => {
+    if (!selectedServer || !confirm(t("common.confirmDelete", "Are you sure?")))
+      return;
+    try {
+      await api.delete(`/database/${selectedServer._id}/schedules/${id}`);
+      toast.success(t("ftp.deleted", "Deleted"));
+      fetchSchedules();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Delete failed");
     }
   };
 
@@ -233,6 +336,33 @@ const DatabaseManager: React.FC = () => {
     }
   };
 
+  const handleInstallSubmit = async () => {
+    if (!selectedServer) return;
+    if (!installConfig.containerName) {
+      toast.error("Container Name is required");
+      return;
+    }
+    setInstalling(true);
+    try {
+      await api.post(`/database/${selectedServer._id}/install`, installConfig);
+      toast.success(
+        `Successfully installed ${installConfig.serviceType}. Container will be visible shortly.`,
+      );
+      setInstallOpen(false);
+      setInstallConfig({
+        serviceType: "postgres",
+        containerName: "",
+        dbUser: "",
+        dbPassword: "",
+      });
+      fetchContainers();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to install service");
+    } finally {
+      setInstalling(false);
+    }
+  };
+
   if (!selectedServer) {
     return (
       <Box sx={{ p: 3, textAlign: "center" }}>
@@ -272,16 +402,43 @@ const DatabaseManager: React.FC = () => {
             </Typography>
           </Box>
         </Box>
-        <Button
-          startIcon={<RefreshIcon />}
-          onClick={tab === 0 ? fetchContainers : fetchBackups}
-          disabled={loading}
-          variant="outlined"
-          size="small"
-          sx={{ ml: { sm: "auto" }, width: { xs: "100%", sm: "auto" } }}
+        <Box
+          sx={{
+            ml: { sm: "auto" },
+            display: "flex",
+            gap: 1,
+            width: { xs: "100%", sm: "auto" },
+          }}
         >
-          {t("common.refresh")}
-        </Button>
+          <Button
+            startIcon={<RefreshIcon />}
+            onClick={tab === 0 ? fetchContainers : fetchBackups}
+            disabled={loading}
+            variant="outlined"
+            size="small"
+            fullWidth
+          >
+            {t("common.refresh")}
+          </Button>
+          {tab === 0 && (
+            <Button
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setInstallConfig((prev) => ({
+                  ...prev,
+                  containerName: `my-${installConfig.serviceType}-${Math.floor(Math.random() * 1000)}`,
+                }));
+                generatePassword();
+                setInstallOpen(true);
+              }}
+              variant="contained"
+              size="small"
+              fullWidth
+            >
+              New Service
+            </Button>
+          )}
+        </Box>
       </Box>
 
       <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
@@ -296,10 +453,15 @@ const DatabaseManager: React.FC = () => {
             icon={<BackupIcon />}
             iconPosition="start"
           />
+          <Tab
+            label="Automated Backups"
+            icon={<AccessTimeIcon />}
+            iconPosition="start"
+          />
         </Tabs>
       </Box>
 
-      {tab === 0 ? (
+      {tab === 0 && (
         <>
           {loading && containers.length === 0 ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -423,6 +585,17 @@ const DatabaseManager: React.FC = () => {
                             >
                               {t("database.backup")}
                             </Button>
+                            <Button
+                              startIcon={<AccessTimeIcon />}
+                              size="small"
+                              variant="outlined"
+                              onClick={() => handleBackupClick(c, true)}
+                              disabled={
+                                c.type === "unknown" || c.type === "redis"
+                              }
+                            >
+                              Auto
+                            </Button>
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -510,6 +683,16 @@ const DatabaseManager: React.FC = () => {
                         >
                           {t("database.backup")}
                         </Button>
+                        <Button
+                          startIcon={<AccessTimeIcon />}
+                          size="small"
+                          variant="outlined"
+                          onClick={() => handleBackupClick(c, true)}
+                          disabled={c.type === "unknown" || c.type === "redis"}
+                          fullWidth
+                        >
+                          Auto
+                        </Button>
                       </Box>
                     </CardContent>
                   </Card>
@@ -518,7 +701,9 @@ const DatabaseManager: React.FC = () => {
             </>
           )}
         </>
-      ) : (
+      )}
+
+      {tab === 1 && (
         <>
           {/* Desktop Table */}
           <TableContainer
@@ -756,6 +941,186 @@ const DatabaseManager: React.FC = () => {
         </>
       )}
 
+      {tab === 2 && (
+        <>
+          {/* Desktop Table for Schedules */}
+          <TableContainer
+            component={Paper}
+            elevation={0}
+            variant="outlined"
+            sx={{ display: { xs: "none", md: "block" } }}
+          >
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Container</TableCell>
+                  <TableCell>Schedule</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Last Run</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loading && schedules.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center">
+                      <Skeleton />
+                    </TableCell>
+                  </TableRow>
+                ) : schedules.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                      <Typography color="text.secondary">
+                        No automated backups configured
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  schedules.map((s) => (
+                    <TableRow key={s._id}>
+                      <TableCell
+                        sx={{ fontFamily: "monospace", fontWeight: 600 }}
+                      >
+                        {s.containerId}
+                      </TableCell>
+                      <TableCell sx={{ fontFamily: "monospace" }}>
+                        {s.schedule}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={s.status.toUpperCase()}
+                          size="small"
+                          color={s.status === "active" ? "success" : "default"}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {s.lastRun
+                          ? new Date(s.lastRun).toLocaleString()
+                          : "Never"}
+                        {s.lastStatus === "failed" && (
+                          <Typography
+                            variant="caption"
+                            color="error"
+                            display="block"
+                          >
+                            Failed
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="right">
+                        <Tooltip
+                          title={
+                            s.status === "active"
+                              ? "Pause Schedule"
+                              : "Resume Schedule"
+                          }
+                        >
+                          <IconButton
+                            color={
+                              s.status === "active" ? "warning" : "success"
+                            }
+                            size="small"
+                            onClick={() =>
+                              handleToggleSchedule(s._id, s.status)
+                            }
+                          >
+                            {s.status === "active" ? (
+                              <PauseIcon />
+                            ) : (
+                              <PlayArrowIcon />
+                            )}
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={() => handleDeleteSchedule(s._id)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* Mobile View for Schedules */}
+          <Box
+            sx={{
+              display: { xs: "flex", md: "none" },
+              flexDirection: "column",
+              gap: 1,
+            }}
+          >
+            {schedules.map((s) => (
+              <Card key={s._id} variant="outlined">
+                <CardContent sx={{ p: 1.5, pb: "12px !important" }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={600}
+                      sx={{ fontFamily: "monospace" }}
+                    >
+                      {s.containerId}
+                    </Typography>
+                    <Chip
+                      label={s.status.toUpperCase()}
+                      size="small"
+                      color={s.status === "active" ? "success" : "default"}
+                      sx={{ height: 20, fontSize: 10 }}
+                    />
+                  </Box>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontFamily: "monospace", mb: 1 }}
+                  >
+                    Cron: {s.schedule}
+                  </Typography>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}
+                  >
+                    <Button
+                      size="small"
+                      color={s.status === "active" ? "warning" : "success"}
+                      startIcon={
+                        s.status === "active" ? (
+                          <PauseIcon />
+                        ) : (
+                          <PlayArrowIcon />
+                        )
+                      }
+                      onClick={() => handleToggleSchedule(s._id, s.status)}
+                    >
+                      {s.status === "active" ? "Pause" : "Resume"}
+                    </Button>
+                    <Button
+                      size="small"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => handleDeleteSchedule(s._id)}
+                    >
+                      Delete
+                    </Button>
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
+        </>
+      )}
+
       {/* Backup Dialog */}
       <Dialog
         open={backupOpen}
@@ -796,12 +1161,46 @@ const DatabaseManager: React.FC = () => {
                 setBackupConfig({ ...backupConfig, dbPassword: e.target.value })
               }
             />
-            <Typography variant="caption" color="text.secondary">
-              {t(
-                "database.backupHint",
-                "Backup defaults to /tmp/ on the server.",
-              )}
-            </Typography>
+
+            {isAutomatedBackup && (
+              <>
+                <TextField
+                  label="Cron Schedule"
+                  fullWidth
+                  size="small"
+                  value={backupConfig.schedule}
+                  onChange={(e) =>
+                    setBackupConfig({
+                      ...backupConfig,
+                      schedule: e.target.value,
+                    })
+                  }
+                  helperText="e.g. 0 0 * * * for Daily Midnight"
+                />
+                <TextField
+                  label="Retention (Days)"
+                  fullWidth
+                  type="number"
+                  size="small"
+                  value={backupConfig.retentionDays}
+                  onChange={(e) =>
+                    setBackupConfig({
+                      ...backupConfig,
+                      retentionDays: parseInt(e.target.value),
+                    })
+                  }
+                />
+              </>
+            )}
+
+            {!isAutomatedBackup && (
+              <Typography variant="caption" color="text.secondary">
+                {t(
+                  "database.backupHint",
+                  "Backup defaults to /tmp/ on the server.",
+                )}
+              </Typography>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
@@ -813,7 +1212,11 @@ const DatabaseManager: React.FC = () => {
             onClick={handleBackupSubmit}
             disabled={backingUp}
           >
-            {backingUp ? t("common.loading") : t("database.startBackup")}
+            {backingUp
+              ? t("common.loading")
+              : isAutomatedBackup
+                ? "Create Schedule"
+                : t("database.startBackup")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -906,6 +1309,117 @@ const DatabaseManager: React.FC = () => {
             disabled={restoring || !restoreConfig.containerId}
           >
             {restoring ? t("common.loading") : "Restore"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Install Service Dialog */}
+      <Dialog
+        open={installOpen}
+        onClose={() => setInstallOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Install New Database Service</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Database Engine</InputLabel>
+              <Select
+                label="Database Engine"
+                value={installConfig.serviceType}
+                onChange={(e) => {
+                  setInstallConfig({
+                    ...installConfig,
+                    serviceType: e.target.value as string,
+                    containerName: `my-${e.target.value}-${Math.floor(Math.random() * 1000)}`,
+                  });
+                }}
+              >
+                <MenuItem value="postgres">PostgreSQL 15</MenuItem>
+                <MenuItem value="mysql">MySQL 8</MenuItem>
+                <MenuItem value="mongo">MongoDB 6</MenuItem>
+                <MenuItem value="redis">Redis 7</MenuItem>
+                <MenuItem value="rabbitmq">RabbitMQ 3 Management</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              label="Container Name"
+              fullWidth
+              size="small"
+              value={installConfig.containerName}
+              onChange={(e) =>
+                setInstallConfig({
+                  ...installConfig,
+                  containerName: e.target.value,
+                })
+              }
+              helperText="Only alphanumeric chars, hyphens, and underscores."
+            />
+
+            {(installConfig.serviceType === "postgres" ||
+              installConfig.serviceType === "mysql" ||
+              installConfig.serviceType === "mongo" ||
+              installConfig.serviceType === "rabbitmq") && (
+              <TextField
+                label="Username"
+                fullWidth
+                size="small"
+                value={installConfig.dbUser}
+                onChange={(e) =>
+                  setInstallConfig({ ...installConfig, dbUser: e.target.value })
+                }
+                placeholder={
+                  installConfig.serviceType === "postgres"
+                    ? "postgres"
+                    : installConfig.serviceType === "mysql"
+                      ? "app_user"
+                      : "admin"
+                }
+                helperText="Leave empty to use engine defaults."
+              />
+            )}
+
+            <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+              <TextField
+                label="Password"
+                type="text"
+                fullWidth
+                size="small"
+                value={installConfig.dbPassword}
+                onChange={(e) =>
+                  setInstallConfig({
+                    ...installConfig,
+                    dbPassword: e.target.value,
+                  })
+                }
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={generatePassword}
+                sx={{ minWidth: 100, height: 40 }}
+              >
+                Generate
+              </Button>
+            </Box>
+
+            <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>
+              ⚠️ The service will be installed as a Docker container on port
+              defaults (e.g. 5432, 27017, etc). Ensure port is not in use!
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setInstallOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleInstallSubmit}
+            disabled={installing}
+          >
+            {installing ? "Installing..." : "Install Service"}
           </Button>
         </DialogActions>
       </Dialog>

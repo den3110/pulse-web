@@ -1,4 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ServerProvider } from "./contexts/ServerContext";
@@ -22,21 +28,55 @@ import FTPManager from "./pages/FTPManager";
 import CronManager from "./pages/CronManager";
 import PortManager from "./pages/PortManager";
 import DatabaseManager from "./pages/DatabaseManager";
+import DockerManager from "./pages/DockerManager";
+import InfrastructureMap from "./pages/InfrastructureMap";
+import Analytics from "./pages/Analytics";
+import ApprovalCenter from "./pages/ApprovalCenter";
+import SecretVault from "./pages/SecretVault";
+import WebhookDebugger from "./pages/WebhookDebugger";
+import TestRunner from "./pages/TestRunner";
+import PipelineBuilder from "./pages/PipelineBuilder";
+import VpnManager from "./pages/VpnManager";
+import GlobalBandwidth from "./pages/GlobalBandwidth";
 import NotFound from "./pages/NotFound";
+import Landing from "./pages/Landing";
+import Pricing from "./pages/Pricing";
+import Docs from "./pages/Docs";
+import LogStudio from "./pages/LogStudio";
+import OAuthCallback from "./pages/OAuthCallback";
 import Layout from "./components/Layout";
+import AcceptInvite from "./pages/AcceptInvite";
 import "./index.css";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
+
   if (loading)
     return (
       <div className="loading-page">
         <div className="loading-spinner" />
       </div>
     );
-  if (!user) return <Navigate to="/login" />;
+
+  if (!user) {
+    // Intercept OAuth login callbacks that GitHub/Google send to /settings by user choice
+    if (
+      location.pathname === "/settings" &&
+      location.search.includes("code=")
+    ) {
+      const separator = location.search.includes("?") ? "&" : "?";
+      return (
+        <Navigate
+          to={`/oauth/callback${location.search}${separator}provider=github`}
+          replace
+        />
+      );
+    }
+    return <Navigate to="/" />;
+  }
   return <>{children}</>;
 };
 
@@ -48,7 +88,7 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="loading-spinner" />
       </div>
     );
-  if (user) return <Navigate to="/" />;
+  if (user) return <Navigate to="/dashboard" />;
   return <>{children}</>;
 };
 
@@ -124,15 +164,25 @@ function App() {
                   }
                 />
 
+                <Route path="/" element={<Landing />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/docs" element={<Docs />} />
+                <Route path="/accept-invite" element={<AcceptInvite />} />
+                <Route path="/oauth/callback" element={<OAuthCallback />} />
+
                 <Route
-                  path="/"
                   element={
                     <ProtectedRoute>
                       <Layout />
                     </ProtectedRoute>
                   }
                 >
-                  <Route index element={<Dashboard />} />
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route
+                    path="infrastructure"
+                    element={<InfrastructureMap />}
+                  />
+                  <Route path="analytics" element={<Analytics />} />
                   <Route path="servers" element={<Servers />} />
                   <Route path="servers/:id" element={<ServerDetail />} />
                   <Route path="projects" element={<Projects />} />
@@ -149,6 +199,19 @@ function App() {
                   <Route path="activity" element={<ActivityLog />} />
                   <Route path="users" element={<UserManagement />} />
                   <Route path="settings" element={<Settings />} />
+                  <Route path="docker" element={<DockerManager />} />
+                  <Route path="approvals" element={<ApprovalCenter />} />
+                  <Route path="secrets" element={<SecretVault />} />
+                  <Route path="webhook-debug" element={<WebhookDebugger />} />
+                  <Route path="test-runner" element={<TestRunner />} />
+                  <Route path="pipelines" element={<PipelineBuilder />} />
+                  <Route path="vpn" element={<VpnManager />} />
+                  <Route path="bandwidth" element={<GlobalBandwidth />} />
+                  <Route path="logs" element={<LogStudio />} />
+                  <Route
+                    path="infrastructure"
+                    element={<InfrastructureMap />}
+                  />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>

@@ -169,13 +169,13 @@ const ServerFileSelectorDialog: React.FC<ServerFileSelectorDialogProps> = ({
       >
         <Box
           sx={{
-            bgcolor: "rgba(99, 102, 241, 0.15)",
+            bgcolor: "var(--primary-main-15)",
             p: 1,
             borderRadius: 1.5,
             display: "flex",
           }}
         >
-          <InsertDriveFileIcon sx={{ color: "#6366f1" }} />
+          <InsertDriveFileIcon sx={{ color: "var(--primary-main)" }} />
         </Box>
         <Typography
           variant="h6"
@@ -305,8 +305,8 @@ const ServerFileSelectorDialog: React.FC<ServerFileSelectorDialogProps> = ({
                     mb: 0.5,
                     mx: 1,
                     "&.Mui-selected": {
-                      bgcolor: "rgba(99, 102, 241, 0.25)",
-                      "&:hover": { bgcolor: "rgba(99, 102, 241, 0.35)" },
+                      bgcolor: "var(--primary-main-25)",
+                      "&:hover": { bgcolor: "var(--primary-main-35)" },
                     },
                     "&:hover": { bgcolor: "rgba(255, 255, 255, 0.05)" },
                     transition: "all 0.15s",

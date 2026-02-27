@@ -13,20 +13,28 @@ interface User {
   username: string;
   email: string;
   role: string;
+  planType: "free" | "pro" | "enterprise";
+  subscriptionStatus: "active" | "past_due" | "canceled" | "trialing";
+  isTwoFactorEnabled?: boolean;
   githubUsername?: string;
   activeServer?: string;
+  currentTeam?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<any>;
+  login2FA: (tempToken: string, code: string) => Promise<void>;
   register: (
     username: string,
     email: string,
     password: string,
   ) => Promise<void>;
+  oauthLogin: (user: User, accessToken: string, refreshToken: string) => void;
   logout: () => void;
+  hasFeatureAccess: (feature: string) => boolean;
+  fetchUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -105,8 +113,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => clearInterval(interval);
   }, [user]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<any> => {
     const { data } = await api.post("/auth/login", { email, password });
+    if (data.requires2FA) {
+      return { requires2FA: true, tempToken: data.tempToken };
+    }
+    localStorage.setItem("accessToken", data.accessToken);
+    localStorage.setItem("refreshToken", data.refreshToken);
+    setUser(data.user);
+    connectSocket();
+    return { success: true };
+  };
+
+  const login2FA = async (tempToken: string, code: string): Promise<void> => {
+    const { data } = await api.post("/auth/login/2fa", { tempToken, code });
     localStorage.setItem("accessToken", data.accessToken);
     localStorage.setItem("refreshToken", data.refreshToken);
     setUser(data.user);
@@ -129,8 +149,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     connectSocket();
   };
 
+  const oauthLogin = (
+    oauthUser: User,
+    accessToken: string,
+    refreshToken: string,
+  ) => {
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
+    setUser(oauthUser);
+    connectSocket();
+  };
+
+  const hasFeatureAccess = useCallback(
+    (feature: string): boolean => {
+      if (!user) return false;
+      // Admins always get full access regardless of plan for testing
+      if (user.role === "admin") return true;
+
+      // Example: Feature checking logic based on plan
+      const limits = {
+        free: { maxServers: 1, maxProjects: 3, hasAdvancedAnalytics: false },
+        pro: {
+          maxServers: 5,
+          maxProjects: Infinity,
+          hasAdvancedAnalytics: true,
+        },
+        enterprise: {
+          maxServers: Infinity,
+          maxProjects: Infinity,
+          hasAdvancedAnalytics: true,
+        },
+      };
+
+      // Fallback safely if planType is somehow undefined on older accounts
+      const plan = limits[user.planType || "free"];
+
+      // Example specific checks if needed (for now just returning true for basic features)
+      // Detailed feature gates could be injected here if called like hasFeatureAccess('analytics')
+      if (feature === "advancedAnalytics") return plan.hasAdvancedAnalytics;
+
+      return true; // Default allow for unspecified features for now
+    },
+    [user],
+  );
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        login2FA,
+        register,
+        oauthLogin,
+        logout,
+        hasFeatureAccess,
+        fetchUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

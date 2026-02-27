@@ -51,7 +51,8 @@ body {
 }
 
 .terminal-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--terminal-text);
+  opacity: 0.2;
   border-radius: 3px;
 }
 
@@ -97,7 +98,8 @@ body {
   top: 18px;
   width: 1px;
   height: calc(100% - 6px);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--terminal-text);
+  opacity: 0.1;
 }
 
 .log-line:last-child::after {
@@ -127,7 +129,7 @@ body {
 
 /* Text colors per type */
 .log-line.info {
-  color: #c9d1d9;
+  color: var(--terminal-text);
 }
 .log-line.success {
   color: #10b981;
@@ -143,16 +145,16 @@ body {
 .log-line.step-header {
   padding: 8px 10px;
   margin: 8px 0 2px;
-  background: rgba(99, 102, 241, 0.08);
+  background: var(--primary-main-08);
   border-radius: 6px;
-  border-left: 2px solid #6366f1;
+  border-left: 2px solid var(--primary-main);
   font-weight: 500;
   color: #e2e8f0;
 }
 
 .log-line.step-header::before {
-  background: #6366f1;
-  border-color: rgba(99, 102, 241, 0.4);
+  background: var(--primary-main);
+  border-color: var(--primary-main-40);
   min-width: 10px;
   height: 10px;
   margin-top: 4px;
@@ -200,10 +202,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(127, 127, 127, 0.4);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(127, 127, 127, 0.6);
 }

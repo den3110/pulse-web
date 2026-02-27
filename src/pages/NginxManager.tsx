@@ -41,6 +41,7 @@ import BugReportIcon from "@mui/icons-material/BugReport";
 import ReplayIcon from "@mui/icons-material/Replay";
 import DescriptionIcon from "@mui/icons-material/Description";
 import DnsIcon from "@mui/icons-material/Dns";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import CodeEditor from "../components/CodeEditor";
 
 interface NginxConfig {
@@ -114,6 +115,13 @@ const NginxManager: React.FC<{ hideHeader?: boolean }> = ({
   const [logType, setLogType] = useState<"access" | "error">("access");
   const [logContent, setLogContent] = useState("");
   const [logLoading, setLogLoading] = useState(false);
+
+  // SSL
+  const [sslOpen, setSslOpen] = useState(false);
+  const [sslTarget, setSslTarget] = useState("");
+  const [sslDomain, setSslDomain] = useState("");
+  const [sslEmail, setSslEmail] = useState("");
+  const [sslLoading, setSslLoading] = useState(false);
 
   // Fetch servers handled globally
   // useEffect(() => {
@@ -318,6 +326,33 @@ const NginxManager: React.FC<{ hideHeader?: boolean }> = ({
     },
     [selectedServer?._id],
   );
+
+  const handleSslProvision = async () => {
+    if (!sslDomain || !sslEmail) {
+      toast.error("Domain and Email are required");
+      return;
+    }
+    setSslLoading(true);
+    try {
+      const { data } = await api.post(`/nginx/${selectedServer?._id}/ssl`, {
+        domain: sslDomain,
+        email: sslEmail,
+      });
+      if (data.success) {
+        toast.success(`SSL provisioned for ${sslDomain}!`);
+        setSslOpen(false);
+        fetchConfigs(); // Refresh configs since certbot modified them
+      } else {
+        toast.error(data.message || "SSL Provision failed");
+      }
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || err.message || "Failed to provision SSL",
+      );
+    } finally {
+      setSslLoading(false);
+    }
+  };
 
   // selectedServerInfo removed
 
@@ -646,6 +681,23 @@ const NginxManager: React.FC<{ hideHeader?: boolean }> = ({
                         <DeleteIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Provision SSL">
+                      <IconButton
+                        size="small"
+                        color="info"
+                        onClick={() => {
+                          setSslTarget(config.name);
+                          setSslDomain(
+                            config.name === "default"
+                              ? ""
+                              : config.name.replace(".conf", ""),
+                          );
+                          setSslOpen(true);
+                        }}
+                      >
+                        <LockOutlinedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </Box>
               ))}
@@ -912,6 +964,72 @@ const NginxManager: React.FC<{ hideHeader?: boolean }> = ({
             Copy
           </Button>
           <Button onClick={() => setLogsOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* SSL Provision Dialog */}
+      <Dialog
+        open={sslOpen}
+        onClose={() => setSslOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <LockOutlinedIcon color="info" />
+          Provision SSL Certificate
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            pt: "8px !important",
+          }}
+        >
+          <Typography variant="body2" color="text.secondary">
+            Pulse will automatically instruct Let's Encrypt (`certbot`) to
+            generate a free SSL certificate and attach it to{" "}
+            <strong>{sslTarget}</strong>.
+          </Typography>
+          <TextField
+            label="Domain Name"
+            size="small"
+            fullWidth
+            value={sslDomain}
+            onChange={(e) => setSslDomain(e.target.value)}
+            placeholder="e.g. app.mycompany.com"
+            autoFocus
+          />
+          <TextField
+            label="Email Address"
+            type="email"
+            size="small"
+            fullWidth
+            value={sslEmail}
+            onChange={(e) => setSslEmail(e.target.value)}
+            placeholder="e.g. admin@mycompany.com"
+            helperText="Required by Let's Encrypt for urgent renewal notices"
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setSslOpen(false)} color="inherit">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSslProvision}
+            variant="contained"
+            color="info"
+            disabled={sslLoading || !sslDomain || !sslEmail}
+            startIcon={
+              sslLoading ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <LockOutlinedIcon />
+              )
+            }
+          >
+            Agree & Provision SSL
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

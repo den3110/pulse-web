@@ -1,8 +1,8 @@
-import { createTheme, Theme } from "@mui/material/styles";
+import { createTheme, Theme, alpha } from "@mui/material/styles";
 
 export function getTheme(
   mode: "dark" | "light",
-  primaryColor: string = "#6366f1",
+  primaryColor: string = "#f97316",
 ): Theme {
   const isDark = mode === "dark";
 
@@ -14,9 +14,9 @@ export function getTheme(
         // Let MUI generate light/dark automatically or we can manually lighten/darken
       },
       secondary: {
-        main: "#8b5cf6",
-        light: "#a78bfa",
-        dark: "#7c3aed",
+        main: "#fb923c",
+        light: "#fdba74",
+        dark: "#f97316",
       },
       success: {
         main: "#10b981",
@@ -74,14 +74,26 @@ export function getTheme(
             "--border-color": isDark
               ? "rgba(255, 255, 255, 0.08)"
               : "rgba(0, 0, 0, 0.08)",
+            "--primary-main": primaryColor,
+            "--secondary-main": "#fb923c",
+            "--primary-main-06": alpha(primaryColor, 0.06),
+            "--primary-main-08": alpha(primaryColor, 0.08),
+            "--primary-main-10": alpha(primaryColor, 0.1),
+            "--primary-main-15": alpha(primaryColor, 0.15),
+            "--primary-main-20": alpha(primaryColor, 0.2),
+            "--primary-main-25": alpha(primaryColor, 0.25),
+            "--primary-main-30": alpha(primaryColor, 0.3),
+            "--primary-main-35": alpha(primaryColor, 0.35),
+            "--primary-main-40": alpha(primaryColor, 0.4),
+            "--primary-main-70": alpha(primaryColor, 0.7),
             backgroundImage: isDark
               ? `
-              radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-              radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 50%)
+              radial-gradient(ellipse at 20% 20%, ${alpha(primaryColor, 0.08)} 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 80%, ${alpha(primaryColor, 0.06)} 0%, transparent 50%)
             `
               : `
-              radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.04) 0%, transparent 50%),
-              radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.03) 0%, transparent 50%)
+              radial-gradient(ellipse at 20% 20%, ${alpha(primaryColor, 0.04)} 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 80%, ${alpha(primaryColor, 0.03)} 0%, transparent 50%)
             `,
             backgroundAttachment: "fixed",
           },
@@ -186,5 +198,5 @@ export function getTheme(
 }
 
 // Default export for backward compatibility
-const theme = getTheme("dark", "#6366f1");
+const theme = getTheme("dark", "#f97316");
 export default theme;
