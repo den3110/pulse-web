@@ -2,6 +2,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "docs": "Docs",
+    "pricing": "Pricing",
     "servers": "Servers",
     "projects": "Projects",
     "nginx": "Nginx",

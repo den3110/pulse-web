@@ -2,6 +2,7 @@
   "nav": {
     "dashboard": "Bảng điều khiển",
     "docs": "Tài liệu",
+    "pricing": "Bảng giá",
     "servers": "Máy chủ",
     "projects": "Dự án",
     "nginx": "Nginx",

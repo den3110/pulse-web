@@ -161,7 +161,7 @@ const PublicNavbar: React.FC = () => {
                   : {},
               }}
             >
-              {t("pricing.title", "Pricing")}
+              {t("nav.pricing", "Pricing")}
             </Button>
 
             {user ? (
@@ -274,7 +274,7 @@ const PublicNavbar: React.FC = () => {
                 color: isPricingActive ? "var(--primary-main)" : "inherit",
               }}
             >
-              <ListItemText primary={t("pricing.title", "Pricing")} />
+              <ListItemText primary={t("nav.pricing", "Pricing")} />
             </ListItemButton>
           </ListItem>
 
