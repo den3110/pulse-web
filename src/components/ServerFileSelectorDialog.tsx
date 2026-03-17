@@ -31,6 +31,7 @@ interface ServerFileSelectorDialogProps {
   initialPath?: string;
   title?: string;
   allowedExtensions?: string[]; // e.g., ['.js', '.py', '.sh']
+  selectMode?: "file" | "directory"; // default: 'file'
 }
 
 interface FileEntry {
@@ -45,9 +46,12 @@ const ServerFileSelectorDialog: React.FC<ServerFileSelectorDialogProps> = ({
   onSelect,
   serverId,
   initialPath = "/",
-  title = "Select File",
+  title,
   allowedExtensions,
+  selectMode = "file",
 }) => {
+  const isDirMode = selectMode === "directory";
+  const effectiveTitle = title || (isDirMode ? "Select Folder" : "Select File");
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [currentPath, setCurrentPath] = useState(initialPath);
   const [loading, setLoading] = useState(false);
@@ -100,24 +104,37 @@ const ServerFileSelectorDialog: React.FC<ServerFileSelectorDialogProps> = ({
 
   const handleEntryClick = (entry: FileEntry) => {
     if (entry.type === "directory") {
-      const newPath =
-        currentPath === "/" ? `/${entry.name}` : `${currentPath}/${entry.name}`;
-      loadEntries(newPath);
+      if (isDirMode) {
+        // In directory mode, single click selects the folder
+        setSelectedFile(entry.name);
+      } else {
+        // In file mode, click navigates into the folder
+        const newPath =
+          currentPath === "/"
+            ? `/${entry.name}`
+            : `${currentPath}/${entry.name}`;
+        loadEntries(newPath);
+      }
     } else {
-      // It's a file
+      if (isDirMode) return; // Ignore file clicks in directory mode
       if (allowedExtensions) {
         const ext = "." + entry.name.split(".").pop();
         if (
           !allowedExtensions.includes(ext) &&
           !allowedExtensions.includes(entry.name)
         ) {
-          // Optional: could show toast or just ignore.
-          // For now, let's select it but maybe visually warn?
-          // actually, better to just allow selecting any file if user insists, or filter visualy.
-          // Let's just select it.
         }
       }
       setSelectedFile(entry.name);
+    }
+  };
+
+  const handleEntryDoubleClick = (entry: FileEntry) => {
+    if (entry.type === "directory") {
+      // Double-click always navigates into the folder
+      const newPath =
+        currentPath === "/" ? `/${entry.name}` : `${currentPath}/${entry.name}`;
+      loadEntries(newPath);
     }
   };
 
@@ -130,13 +147,27 @@ const ServerFileSelectorDialog: React.FC<ServerFileSelectorDialogProps> = ({
   };
 
   const confirmSelection = () => {
-    if (selectedFile) {
-      const fullPath =
-        currentPath === "/"
-          ? `/${selectedFile}`
-          : `${currentPath}/${selectedFile}`;
-      onSelect(fullPath);
+    if (isDirMode) {
+      // If a folder is selected, return its full path; otherwise return current directory
+      if (selectedFile) {
+        const fullPath =
+          currentPath === "/"
+            ? `/${selectedFile}`
+            : `${currentPath}/${selectedFile}`;
+        onSelect(fullPath);
+      } else {
+        onSelect(currentPath);
+      }
       onClose();
+    } else {
+      if (selectedFile) {
+        const fullPath =
+          currentPath === "/"
+            ? `/${selectedFile}`
+            : `${currentPath}/${selectedFile}`;
+        onSelect(fullPath);
+        onClose();
+      }
     }
   };
 
@@ -175,13 +206,17 @@ const ServerFileSelectorDialog: React.FC<ServerFileSelectorDialogProps> = ({
             display: "flex",
           }}
         >
-          <InsertDriveFileIcon sx={{ color: "var(--primary-main)" }} />
+          {isDirMode ? (
+            <FolderIcon sx={{ color: "var(--primary-main)" }} />
+          ) : (
+            <InsertDriveFileIcon sx={{ color: "var(--primary-main)" }} />
+          )}
         </Box>
         <Typography
           variant="h6"
           sx={{ fontWeight: 600, flex: 1, fontSize: "1.1rem" }}
         >
-          {title}
+          {effectiveTitle}
         </Typography>
         <IconButton
           size="small"
@@ -293,52 +328,54 @@ const ServerFileSelectorDialog: React.FC<ServerFileSelectorDialogProps> = ({
           </Box>
         ) : (
           <List dense sx={{ maxHeight: 350, overflow: "auto", mx: -1 }}>
-            {entries.map((entry) => {
-              const isSelected = selectedFile === entry.name;
-              return (
-                <ListItemButton
-                  key={entry.name}
-                  onClick={() => handleEntryClick(entry)}
-                  selected={isSelected}
-                  sx={{
-                    borderRadius: 1.5,
-                    mb: 0.5,
-                    mx: 1,
-                    "&.Mui-selected": {
-                      bgcolor: "var(--primary-main-25)",
-                      "&:hover": { bgcolor: "var(--primary-main-35)" },
-                    },
-                    "&:hover": { bgcolor: "rgba(255, 255, 255, 0.05)" },
-                    transition: "all 0.15s",
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: 40 }}>
-                    {entry.type === "directory" ? (
-                      <FolderIcon sx={{ color: "#f59e0b", fontSize: 22 }} />
-                    ) : (
-                      <InsertDriveFileIcon
-                        sx={{ color: "text.secondary", fontSize: 20 }}
-                      />
-                    )}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={entry.name}
-                    primaryTypographyProps={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: "0.9rem",
-                      fontWeight: 500,
-                      color: isSelected ? "primary.main" : "text.primary",
+            {entries
+              .filter((entry) =>
+                isDirMode ? entry.type === "directory" : true,
+              )
+              .map((entry) => {
+                const isSelected = selectedFile === entry.name;
+                return (
+                  <ListItemButton
+                    key={entry.name}
+                    onClick={() => handleEntryClick(entry)}
+                    onDoubleClick={() => handleEntryDoubleClick(entry)}
+                    selected={isSelected}
+                    sx={{
+                      borderRadius: 1.5,
+                      mb: 0.5,
+                      mx: 1,
+                      "&.Mui-selected": {
+                        bgcolor: "var(--primary-main-25)",
+                        "&:hover": { bgcolor: "var(--primary-main-35)" },
+                      },
+                      "&:hover": { bgcolor: "rgba(255, 255, 255, 0.05)" },
+                      transition: "all 0.15s",
                     }}
-                    secondary={
-                      entry.type !== "directory" && allowedExtensions // show valid status if filtering
-                        ? undefined // Simplify for now
-                        : undefined
-                    }
-                  />
-                  {isSelected && <CheckIcon fontSize="small" color="primary" />}
-                </ListItemButton>
-              );
-            })}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      {entry.type === "directory" ? (
+                        <FolderIcon sx={{ color: "#f59e0b", fontSize: 22 }} />
+                      ) : (
+                        <InsertDriveFileIcon
+                          sx={{ color: "text.secondary", fontSize: 20 }}
+                        />
+                      )}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={entry.name}
+                      primaryTypographyProps={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "0.9rem",
+                        fontWeight: 500,
+                        color: isSelected ? "primary.main" : "text.primary",
+                      }}
+                    />
+                    {isSelected && (
+                      <CheckIcon fontSize="small" color="primary" />
+                    )}
+                  </ListItemButton>
+                );
+              })}
           </List>
         )}
       </DialogContent>
@@ -357,7 +394,7 @@ const ServerFileSelectorDialog: React.FC<ServerFileSelectorDialogProps> = ({
         <Button
           variant="contained"
           onClick={confirmSelection}
-          disabled={loading || !selectedFile}
+          disabled={loading || (!isDirMode && !selectedFile)}
           sx={{
             borderRadius: 2,
             px: 3,
@@ -365,7 +402,11 @@ const ServerFileSelectorDialog: React.FC<ServerFileSelectorDialogProps> = ({
             "&:hover": { bgcolor: "primary.dark" },
           }}
         >
-          Select File
+          {isDirMode
+            ? selectedFile
+              ? "Select Folder"
+              : "Select Current Folder"
+            : "Select File"}
         </Button>
       </DialogActions>
     </Dialog>

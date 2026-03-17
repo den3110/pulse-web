@@ -50,6 +50,8 @@ import ProjectCard, {
   type Server,
 } from "../components/ProjectCard";
 import ProjectFormDrawer from "../components/ProjectFormDrawer";
+import { useThemeMode } from "../contexts/ThemeContext";
+import EndUserSites from "./EndUserSites";
 
 interface SortableProjectGridItemProps {
   id: string;
@@ -96,6 +98,8 @@ const Projects: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { t } = useTranslation();
+  const { interfaceMode } = useThemeMode();
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [servers, setServers] = useState<Server[]>([]);
   const [loading, setLoading] = useState(true);
@@ -246,6 +250,11 @@ const Projects: React.FC = () => {
     setShowModal(true);
   }, []);
 
+  // End-user mode: render simplified sites view (MUST be after all hooks)
+  if (interfaceMode === "enduser") {
+    return <EndUserSites />;
+  }
+
   const handleDelete = async () => {
     if (!confirmDelete) return;
     try {
@@ -344,7 +353,7 @@ const Projects: React.FC = () => {
     );
 
   return (
-    <Box sx={{ overflow: "hidden" }}>
+    <Box>
       <SEO
         title={t("seo.projects.title")}
         description={t("seo.projects.description")}
@@ -357,16 +366,26 @@ const Projects: React.FC = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: { xs: "flex-start", sm: "center" },
-          mb: 3,
+          mb: 4,
           flexDirection: { xs: "column", sm: "row" },
           gap: { xs: 2, sm: 0 },
         }}
       >
         <Box className="projects-title-container">
           <Typography
-            variant="body1"
-            fontWeight={500}
+            variant="h4"
+            fontWeight={800}
             className="projects-title"
+            sx={{
+              background: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "linear-gradient(to right, #fff, #a0a0a0)"
+                  : "linear-gradient(to right, #000, #444)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              letterSpacing: "-0.02em",
+              mb: 0.5,
+            }}
           >
             {t("projects.title")}
           </Typography>
@@ -374,6 +393,7 @@ const Projects: React.FC = () => {
             variant="body2"
             color="text.secondary"
             className="projects-count"
+            sx={{ fontWeight: 500 }}
           >
             {t("projects.count", { count: projects.length })}
           </Typography>
@@ -383,6 +403,19 @@ const Projects: React.FC = () => {
           startIcon={<AddIcon />}
           onClick={openCreate}
           className="add-project-btn"
+          sx={{
+            borderRadius: 2,
+            px: 3,
+            py: 1,
+            textTransform: "none",
+            fontWeight: 600,
+            boxShadow: "0 4px 12px rgba(var(--primary-main-channel), 0.2)",
+            "&:hover": {
+              boxShadow: "0 6px 16px rgba(var(--primary-main-channel), 0.3)",
+              transform: "translateY(-1px)",
+            },
+            transition: "all 0.2s",
+          }}
         >
           {t("projects.addProject")}
         </Button>
@@ -393,10 +426,26 @@ const Projects: React.FC = () => {
         className="projects-filter-bar"
         sx={{
           display: "flex",
-          gap: 1,
-          mb: 2.5,
+          gap: 1.5,
+          mb: 4,
           flexWrap: "wrap",
           alignItems: "center",
+          p: 2,
+          borderRadius: 4,
+          background: (theme) =>
+            theme.palette.mode === "dark"
+              ? "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)"
+              : "rgba(255,255,255,0.5)",
+          backdropFilter: "blur(20px)",
+          border: "1px solid",
+          borderColor: (theme) =>
+            theme.palette.mode === "dark"
+              ? "rgba(255,255,255,0.05)"
+              : "rgba(0,0,0,0.05)",
+          boxShadow: (theme) =>
+            theme.palette.mode === "dark"
+              ? "0 4px 20px rgba(0,0,0,0.2)"
+              : "0 4px 20px rgba(0,0,0,0.03)",
         }}
       >
         <TextField
@@ -409,40 +458,127 @@ const Projects: React.FC = () => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon fontSize="small" />
+                <SearchIcon fontSize="small" sx={{ color: "text.secondary" }} />
               </InputAdornment>
             ),
+            sx: {
+              borderRadius: 2,
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(0,0,0,0.2)"
+                  : "rgba(255,255,255,0.8)",
+              "& fieldset": { border: "none" },
+              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.05)",
+            },
           }}
-          sx={{ minWidth: 220 }}
+          sx={{ minWidth: { xs: "100%", sm: 280 } }}
         />
-        {["all", "running", "stopped", "failed", "idle"].map((s) => (
-          <Chip
-            key={s}
-            label={s.charAt(0).toUpperCase() + s.slice(1)}
-            size="small"
-            color={statusFilter === s ? "primary" : "default"}
-            variant={statusFilter === s ? "filled" : "outlined"}
-            onClick={() => setStatusFilter(s)}
-            className={`filter-chip filter-${s}`}
-          />
-        ))}
+
+        <Box
+          sx={{
+            width: "1px",
+            height: 28,
+            bgcolor: "divider",
+            mx: 1,
+            display: { xs: "none", sm: "block" },
+          }}
+        />
+
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", flex: 1 }}>
+          {["all", "running", "stopped", "failed", "idle"].map((s) => (
+            <Chip
+              key={s}
+              label={s.charAt(0).toUpperCase() + s.slice(1)}
+              size="small"
+              onClick={() => setStatusFilter(s)}
+              className={`filter-chip filter-${s}`}
+              sx={{
+                fontWeight: 600,
+                borderRadius: 2,
+                px: 1,
+                py: 2,
+                cursor: "pointer",
+                transition: "all 0.2s",
+                border: "1px solid",
+                borderColor:
+                  statusFilter === s ? "primary.main" : "transparent",
+                bgcolor:
+                  statusFilter === s
+                    ? "rgba(var(--primary-main-channel), 0.1)"
+                    : (theme) =>
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.05)"
+                          : "rgba(0,0,0,0.04)",
+                color: statusFilter === s ? "primary.main" : "text.secondary",
+                "&:hover": {
+                  bgcolor:
+                    statusFilter === s
+                      ? "rgba(var(--primary-main-channel), 0.15)"
+                      : (theme) =>
+                          theme.palette.mode === "dark"
+                            ? "rgba(255,255,255,0.1)"
+                            : "rgba(0,0,0,0.08)",
+                  transform: "translateY(-1px)",
+                },
+              }}
+            />
+          ))}
+        </Box>
       </Box>
 
       {/* Project Grid */}
       {filteredProjects.length === 0 ? (
-        <Card className="no-projects-card">
-          <CardContent sx={{ textAlign: "center", py: 8 }}>
-            <FolderIcon
-              sx={{ fontSize: 56, color: "text.secondary", mb: 2 }}
-              className="no-projects-icon"
-            />
-            <Typography variant="h6" gutterBottom className="no-projects-title">
+        <Card
+          className="no-projects-card"
+          sx={{
+            background: (theme) =>
+              theme.palette.mode === "dark"
+                ? "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)"
+                : "linear-gradient(145deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%)",
+            backdropFilter: "blur(20px)",
+            border: "1px dashed",
+            borderColor: (theme) =>
+              theme.palette.mode === "dark"
+                ? "rgba(255,255,255,0.15)"
+                : "rgba(0,0,0,0.15)",
+            borderRadius: 4,
+            boxShadow: "none",
+          }}
+        >
+          <CardContent sx={{ textAlign: "center", py: 10 }}>
+            <Box
+              sx={{
+                width: 80,
+                height: 80,
+                borderRadius: "50%",
+                bgcolor: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.05)"
+                    : "rgba(0,0,0,0.03)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                mx: "auto",
+                mb: 3,
+              }}
+            >
+              <FolderIcon
+                sx={{ fontSize: 40, color: "text.disabled" }}
+                className="no-projects-icon"
+              />
+            </Box>
+            <Typography
+              variant="h5"
+              fontWeight={600}
+              gutterBottom
+              className="no-projects-title"
+            >
               {t("projects.noProjects")}
             </Typography>
             <Typography
-              variant="body2"
+              variant="body1"
               color="text.secondary"
-              sx={{ mb: 3 }}
+              sx={{ mb: 4, maxWidth: 400, mx: "auto" }}
               className="no-projects-desc"
             >
               {t("projects.addFirst")}
@@ -452,6 +588,14 @@ const Projects: React.FC = () => {
               startIcon={<AddIcon />}
               onClick={openCreate}
               className="add-project-btn-empty"
+              sx={{
+                borderRadius: 2,
+                px: 4,
+                py: 1.5,
+                textTransform: "none",
+                fontWeight: 600,
+                boxShadow: "0 4px 12px rgba(var(--primary-main-channel), 0.2)",
+              }}
             >
               {t("projects.addProject")}
             </Button>

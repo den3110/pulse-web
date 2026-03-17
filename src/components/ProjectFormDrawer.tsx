@@ -39,12 +39,15 @@ import SearchIcon from "@mui/icons-material/Search";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import FolderBrowserDialog from "./FolderBrowserDialog";
+import ServerFolderBrowserDialog from "./ServerFolderBrowserDialog";
+import { useServer } from "../contexts/ServerContext";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { type Project, type Server } from "./ProjectCard";
 
 export interface FormState {
   name: string;
+  sourceType: "git" | "local";
   repoUrl: string;
   branch: string;
   repoFolder: string;
@@ -63,6 +66,7 @@ export interface FormState {
 
 const DEFAULT_FORM: FormState = {
   name: "",
+  sourceType: "git",
   repoUrl: "",
   branch: "main",
   repoFolder: "",
@@ -95,13 +99,18 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
   onSaved,
 }: ProjectFormDrawerProps) {
   const { t } = useTranslation();
+  const { selectedServer } = useServer();
 
   // ── Form state ──────────────────────────────────────────────────────────────
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
+  const effectiveServerId = form.server || selectedServer?._id || "";
   const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [detectingBranch, setDetectingBranch] = useState(false);
   const [folderBrowserOpen, setFolderBrowserOpen] = useState(false);
+
+  // ── Server folder browser dialog (local projects) ─────────────────────
+  const [serverFolderDialogOpen, setServerFolderDialogOpen] = useState(false);
 
   // ── Tabs ────────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState(0);
@@ -125,8 +134,9 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
     if (editing) {
       setForm({
         name: editing.name,
-        repoUrl: editing.repoUrl,
-        branch: editing.branch,
+        sourceType: (editing as any).sourceType || "git",
+        repoUrl: editing.repoUrl || "",
+        branch: editing.branch || "main",
         repoFolder: editing.repoFolder || "",
         server: editing.server._id,
         deployPath: editing.deployPath,
@@ -149,14 +159,14 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
       setEnvVars(vars);
       setActiveTab(0);
     } else {
-      setForm(DEFAULT_FORM);
+      setForm({ ...DEFAULT_FORM, server: selectedServer?._id || "" });
       setEnvVars([]);
       setActiveTab(0);
       setSelectedRepo(null);
       setRepoSearch("");
       setReposPage(1);
     }
-  }, [open, editing]);
+  }, [open, editing, selectedServer]);
 
   // ── Server-side fetch repos ──────────────────────────────────────────────────
   const fetchRepos = useCallback(
@@ -321,10 +331,14 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
     setForm(DEFAULT_FORM);
   };
 
-  // ── Submit ───────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.server || !form.repoUrl || !form.deployPath) {
+    if (
+      !form.name ||
+      !form.server ||
+      (form.sourceType === "git" && !form.repoUrl) ||
+      !form.deployPath
+    ) {
       toast.error(t("projects.validationError"));
       return;
     }
@@ -406,23 +420,25 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
         </Alert>
       )}
 
-      {/* Server */}
-      <FormControl fullWidth sx={{ mb: 2 }} className="input-project-server">
-        <InputLabel>{t("common.server")}</InputLabel>
-        <Select
-          value={form.server}
-          label={t("common.server")}
-          onChange={(e) => setForm({ ...form, server: e.target.value })}
-          required
-          className="select-server"
-        >
-          {servers.map((server) => (
-            <MenuItem key={server._id} value={server._id}>
-              {server.name} ({server.host})
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      {/* Server — hide if global selectedServer is active */}
+      {!selectedServer && (
+        <FormControl fullWidth sx={{ mb: 2 }} className="input-project-server">
+          <InputLabel>{t("common.server")}</InputLabel>
+          <Select
+            value={form.server}
+            label={t("common.server")}
+            onChange={(e) => setForm({ ...form, server: e.target.value })}
+            required
+            className="select-server"
+          >
+            {servers.map((server) => (
+              <MenuItem key={server._id} value={server._id}>
+                {server.name} ({server.host})
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      )}
 
       {/* Name */}
       <TextField
@@ -436,44 +452,157 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
         className="input-project-name"
       />
 
-      {/* Repo URL — shown in manual mode; in GitHub mode show as read-only info */}
+      {/* Source Type Switch */}
+      {!isGitHubMode && (
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel>Source Strategy</InputLabel>
+          <Select
+            value={form.sourceType || "git"}
+            label="Source Strategy"
+            onChange={(e) =>
+              setForm({
+                ...form,
+                sourceType: e.target.value as "git" | "local",
+              })
+            }
+          >
+            <MenuItem value="git">Git Repository (Pull / Webhook)</MenuItem>
+            <MenuItem value="local">
+              Local Directory (FTP / File Manager)
+            </MenuItem>
+          </Select>
+        </FormControl>
+      )}
+
+      {/* Server folder browser dialog for local projects */}
+      {!isGitHubMode && form.sourceType === "local" && (
+        <>
+          <Box
+            sx={{
+              mb: 2,
+              p: 2,
+              borderRadius: 2,
+              border: "1px solid",
+              borderColor: form.deployPath
+                ? "success.main"
+                : "rgba(255,255,255,0.1)",
+              bgcolor: form.deployPath
+                ? "rgba(76, 175, 80, 0.05)"
+                : "rgba(255,255,255,0.02)",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                borderColor: "primary.main",
+                bgcolor: "rgba(33,150,243,0.05)",
+              },
+            }}
+            onClick={() => {
+              if (!effectiveServerId) {
+                toast.error(
+                  t("projects.selectServerFirst") ||
+                    "Please select a server first",
+                );
+                return;
+              }
+              setServerFolderDialogOpen(true);
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+              }}
+            >
+              <FolderOpenIcon
+                sx={{
+                  color: form.deployPath ? "success.main" : "warning.main",
+                  fontSize: 28,
+                }}
+              />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="body2" fontWeight={600}>
+                  {form.deployPath
+                    ? form.deployPath
+                    : t("projects.browseServer") || "Browse Server Folders"}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {form.deployPath
+                    ? t("projects.clickToChange") || "Click to change folder"
+                    : t("projects.clickToBrowse") ||
+                      "Click to browse and select a folder on the server"}
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                variant="outlined"
+                sx={{ minWidth: 80 }}
+                disabled={!effectiveServerId}
+              >
+                {form.deployPath
+                  ? t("common.change") || "Change"
+                  : t("projects.browseServerBtn") || "Browse"}
+              </Button>
+            </Box>
+          </Box>
+
+          <ServerFolderBrowserDialog
+            open={serverFolderDialogOpen}
+            onClose={() => setServerFolderDialogOpen(false)}
+            onSelect={(folderPath) => {
+              setForm((prev) => ({ ...prev, deployPath: folderPath }));
+              toast.success(
+                `${t("projects.selectedPath") || "Selected"}: ${folderPath}`,
+              );
+            }}
+            serverId={effectiveServerId}
+            initialPath={form.deployPath || "/"}
+            title={t("projects.browseServer") || "Browse Server Folders"}
+            showFiles
+          />
+        </>
+      )}
+
+      {/* Repo URL — shown in git mode; in GitHub mode show as read-only info */}
       {!isGitHubMode ? (
-        <TextField
-          label={t("projects.repoUrl")}
-          placeholder="https://github.com/username/repo.git"
-          value={form.repoUrl}
-          onChange={(e) => setForm({ ...form, repoUrl: e.target.value })}
-          required
-          fullWidth
-          sx={{ mb: 2 }}
-          className="input-repo-url"
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <Tooltip title="Paste from Clipboard">
-                  <IconButton
-                    edge="end"
-                    onClick={async () => {
-                      try {
-                        const text = await navigator.clipboard.readText();
-                        if (text)
-                          setForm((prev) => ({
-                            ...prev,
-                            repoUrl: text.trim(),
-                          }));
-                      } catch {
-                        toast.error("Cannot access clipboard");
-                      }
-                    }}
-                    className="btn-paste-repo"
-                  >
-                    <ContentPasteIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </InputAdornment>
-            ),
-          }}
-        />
+        form.sourceType !== "local" && (
+          <TextField
+            label={t("projects.repoUrl")}
+            placeholder="https://github.com/username/repo.git"
+            value={form.repoUrl}
+            onChange={(e) => setForm({ ...form, repoUrl: e.target.value })}
+            required
+            fullWidth
+            sx={{ mb: 2 }}
+            className="input-repo-url"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Tooltip title="Paste from Clipboard">
+                    <IconButton
+                      edge="end"
+                      onClick={async () => {
+                        try {
+                          const text = await navigator.clipboard.readText();
+                          if (text)
+                            setForm((prev) => ({
+                              ...prev,
+                              repoUrl: text.trim(),
+                            }));
+                        } catch {
+                          toast.error("Cannot access clipboard");
+                        }
+                      }}
+                      className="btn-paste-repo"
+                    >
+                      <ContentPasteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </InputAdornment>
+              ),
+            }}
+          />
+        )
       ) : (
         <TextField
           label={t("projects.repoUrl")}
@@ -487,82 +616,95 @@ const ProjectFormDrawer = memo(function ProjectFormDrawer({
       )}
 
       {/* Branch + Auto Detect */}
-      <Box sx={{ display: "flex", gap: 1, mb: 2 }} className="branch-container">
-        <TextField
-          label={t("projects.branch")}
-          placeholder="main"
-          value={form.branch}
-          onChange={(e) => setForm({ ...form, branch: e.target.value })}
-          sx={{ flex: 1 }}
-          className="input-branch"
-        />
-        <Tooltip
-          title={
-            !form.server
-              ? "Please select a server first"
-              : !form.repoUrl
-                ? "Please enter or import a repository URL"
-                : t("projects.detectBranch")
-          }
+      {form.sourceType !== "local" && (
+        <Box
+          sx={{ display: "flex", gap: 1, mb: 2 }}
+          className="branch-container"
         >
-          <span>
-            <Button
-              variant="outlined"
-              onClick={detectBranch}
-              /* Only require server to be selected; repoUrl is already set in GitHub mode */
-              disabled={detectingBranch || !form.repoUrl || !form.server}
-              startIcon={
-                detectingBranch ? (
-                  <CircularProgress size={16} color="inherit" />
-                ) : (
-                  <AutoFixHighIcon />
-                )
-              }
-              sx={{ minWidth: 130, whiteSpace: "nowrap" }}
-              className="btn-detect-branch"
-            >
-              {detectingBranch ? t("common.loading") : t("projects.detect")}
-            </Button>
-          </span>
-        </Tooltip>
-      </Box>
+          <TextField
+            label={t("projects.branch")}
+            placeholder="main"
+            value={form.branch}
+            onChange={(e) => setForm({ ...form, branch: e.target.value })}
+            sx={{ flex: 1 }}
+            className="input-branch"
+          />
+          <Tooltip
+            title={
+              !form.server
+                ? "Please select a server first"
+                : !form.repoUrl
+                  ? "Please enter or import a repository URL"
+                  : t("projects.detectBranch")
+            }
+          >
+            <span>
+              <Button
+                variant="outlined"
+                onClick={detectBranch}
+                disabled={detectingBranch || !form.repoUrl || !form.server}
+                startIcon={
+                  detectingBranch ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <AutoFixHighIcon />
+                  )
+                }
+                sx={{ minWidth: 130, whiteSpace: "nowrap" }}
+                className="btn-detect-branch"
+              >
+                {detectingBranch ? t("common.loading") : t("projects.detect")}
+              </Button>
+            </span>
+          </Tooltip>
+        </Box>
+      )}
 
-      {/* Repo Folder */}
-      <Box sx={{ mb: 2, display: "flex", gap: 1 }}>
-        <TextField
-          label={t("projects.repoFolder")}
-          placeholder="docs (optional)"
-          value={form.repoFolder || ""}
-          onChange={(e) => setForm({ ...form, repoFolder: e.target.value })}
-          fullWidth
-          helperText={t("projects.repoFolderHint")}
-          className="input-repo-folder"
-        />
-        <Tooltip title={t("projects.browse")}>
-          <span>
-            <Button
-              variant="outlined"
-              sx={{ minWidth: 40, height: 40 }}
-              onClick={() => setFolderBrowserOpen(true)}
-              disabled={
-                !form.repoUrl || !form.branch || !form.server || detectingBranch
-              }
-            >
-              <FolderOpenIcon />
-            </Button>
-          </span>
-        </Tooltip>
-      </Box>
+      {/* Repo Folder (git only) */}
+      {form.sourceType !== "local" && (
+        <>
+          <Box sx={{ mb: 2, display: "flex", gap: 1 }}>
+            <TextField
+              label={t("projects.repoFolder")}
+              placeholder="docs (optional)"
+              value={form.repoFolder || ""}
+              onChange={(e) => setForm({ ...form, repoFolder: e.target.value })}
+              fullWidth
+              helperText={t("projects.repoFolderHint")}
+              className="input-repo-folder"
+            />
+            <Tooltip title={t("projects.browse")}>
+              <span>
+                <Button
+                  variant="outlined"
+                  sx={{ minWidth: 40, height: 40 }}
+                  onClick={() => setFolderBrowserOpen(true)}
+                  disabled={
+                    !form.repoUrl ||
+                    !form.branch ||
+                    !form.server ||
+                    detectingBranch
+                  }
+                >
+                  <FolderOpenIcon />
+                </Button>
+              </span>
+            </Tooltip>
+          </Box>
 
-      <FolderBrowserDialog
-        open={folderBrowserOpen}
-        onClose={() => setFolderBrowserOpen(false)}
-        onSelect={(path) => setForm((prev) => ({ ...prev, repoFolder: path }))}
-        serverId={form.server}
-        repoUrl={form.repoUrl}
-        branch={form.branch}
-        deployPath={form.deployPath}
-      />
+          <FolderBrowserDialog
+            open={folderBrowserOpen}
+            onClose={() => setFolderBrowserOpen(false)}
+            onSelect={(path) =>
+              setForm((prev) => ({ ...prev, repoFolder: path }))
+            }
+            serverId={form.server}
+            repoUrl={form.repoUrl}
+            branch={form.branch}
+            deployPath={form.deployPath}
+          />
+        </>
+      )}
 
       {/* Deploy Path */}
       <TextField

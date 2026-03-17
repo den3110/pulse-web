@@ -20,6 +20,7 @@ interface TerminalTabsProps {
   serverId: string;
   initialPath: string;
   onClose?: () => void;
+  height?: number | string;
 }
 
 interface TerminalSession {
@@ -32,6 +33,7 @@ const TerminalTabs: React.FC<TerminalTabsProps> = ({
   serverId,
   initialPath,
   onClose,
+  height = 400,
 }) => {
   const [sessions, setSessions] = useState<TerminalSession[]>([
     { id: 1, title: "Term 1", path: initialPath },
@@ -95,7 +97,7 @@ const TerminalTabs: React.FC<TerminalTabsProps> = ({
       sx={{
         display: "flex",
         flexDirection: "column",
-        height: collapsed ? "auto" : "100%",
+        height: collapsed ? "auto" : height,
         bgcolor: "var(--terminal-bg)",
         color: "var(--terminal-text)",
         transition: "height 0.3s ease",

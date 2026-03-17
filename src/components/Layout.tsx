@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -25,6 +25,7 @@ import {
   BottomNavigation,
   BottomNavigationAction,
   useTheme,
+  alpha,
 } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import DnsIcon from "@mui/icons-material/Dns";
@@ -55,60 +56,176 @@ import WebhookIcon from "@mui/icons-material/Webhook";
 import ScienceIcon from "@mui/icons-material/Science";
 import LinearScaleIcon from "@mui/icons-material/LinearScale";
 import SubjectIcon from "@mui/icons-material/Subject";
+import PublicIcon from "@mui/icons-material/Public";
+import CodeIcon from "@mui/icons-material/Code";
+import PersonIcon from "@mui/icons-material/Person";
 import NotificationCenter from "./NotificationCenter";
 import AIChatOverlay from "./AIChatOverlay";
 import { useThemeMode } from "../contexts/ThemeContext";
+import type { InterfaceMode } from "../contexts/ThemeContext";
 import ServerSelector from "./ServerSelector";
 import TeamSwitcher from "./TeamSwitcher";
 import CommandPalette from "./CommandPalette";
 
 const DRAWER_WIDTH = 260;
 
-const navItems = [
-  { labelKey: "nav.dashboard", icon: <DashboardIcon />, path: "/dashboard" },
-  { labelKey: "nav.servers", icon: <DnsIcon />, path: "/servers" },
-  { labelKey: "nav.projects", icon: <FolderIcon />, path: "/projects" },
-  { labelKey: "nav.nginx", icon: <LanguageIcon />, path: "/nginx" },
-  { labelKey: "nav.pm2", icon: <TerminalIcon />, path: "/pm2" },
-  { labelKey: "nav.ftp", icon: <SnippetFolderIcon />, path: "/ftp" },
-  { labelKey: "nav.ports", icon: <LanIcon />, path: "/ports" },
-  { labelKey: "nav.cron", icon: <AccessTimeIcon />, path: "/cron" },
-  { labelKey: "nav.database", icon: <StorageIcon />, path: "/database" },
-  { labelKey: "nav.docker", icon: <ViewInArIcon />, path: "/docker" },
+interface NavItem {
+  labelKey: string;
+  icon: React.ReactElement;
+  path: string;
+}
+
+interface NavSection {
+  labelKey: string; // section header translation key
+  items: NavItem[];
+}
+
+const devNavSections: NavSection[] = [
   {
-    labelKey: "nav.infrastructure",
-    icon: <AccountTreeIcon />,
-    path: "/infrastructure",
+    labelKey: "",
+    items: [
+      {
+        labelKey: "nav.dashboard",
+        icon: <DashboardIcon />,
+        path: "/dashboard",
+      },
+      { labelKey: "nav.servers", icon: <DnsIcon />, path: "/servers" },
+      { labelKey: "nav.projects", icon: <FolderIcon />, path: "/projects" },
+    ],
   },
-  { labelKey: "nav.analytics", icon: <BarChartIcon />, path: "/analytics" },
-  { labelKey: "nav.bandwidth", icon: <NetworkCheckIcon />, path: "/bandwidth" },
-  { labelKey: "nav.logs", icon: <SubjectIcon />, path: "/logs" },
-  { labelKey: "nav.approvals", icon: <GppGoodIcon />, path: "/approvals" },
-  { labelKey: "nav.secrets", icon: <VpnKeyIcon />, path: "/secrets" },
   {
-    labelKey: "nav.webhookDebug",
-    icon: <WebhookIcon />,
-    path: "/webhook-debug",
+    labelKey: "nav.group.infrastructure",
+    items: [
+      { labelKey: "nav.nginx", icon: <LanguageIcon />, path: "/nginx" },
+      { labelKey: "nav.pm2", icon: <TerminalIcon />, path: "/pm2" },
+      { labelKey: "nav.docker", icon: <ViewInArIcon />, path: "/docker" },
+      { labelKey: "nav.database", icon: <StorageIcon />, path: "/database" },
+      { labelKey: "nav.ftp", icon: <SnippetFolderIcon />, path: "/ftp" },
+      { labelKey: "nav.ports", icon: <LanIcon />, path: "/ports" },
+      { labelKey: "nav.cron", icon: <AccessTimeIcon />, path: "/cron" },
+      { labelKey: "nav.vpn", icon: <VpnLockIcon />, path: "/vpn" },
+      {
+        labelKey: "nav.oneClick",
+        icon: <RocketLaunchIcon />,
+        path: "/one-click",
+      },
+    ],
   },
-  { labelKey: "nav.testRunner", icon: <ScienceIcon />, path: "/test-runner" },
-  { labelKey: "nav.pipelines", icon: <LinearScaleIcon />, path: "/pipelines" },
-  { labelKey: "nav.vpn", icon: <VpnLockIcon />, path: "/vpn" },
-  { labelKey: "nav.activity", icon: <HistoryIcon />, path: "/activity" },
-  { labelKey: "nav.users", icon: <PeopleIcon />, path: "/users" },
-  { labelKey: "nav.settings", icon: <SettingsIcon />, path: "/settings" },
+  {
+    labelKey: "nav.group.devops",
+    items: [
+      {
+        labelKey: "nav.pipelines",
+        icon: <LinearScaleIcon />,
+        path: "/pipelines",
+      },
+      {
+        labelKey: "nav.testRunner",
+        icon: <ScienceIcon />,
+        path: "/test-runner",
+      },
+      {
+        labelKey: "nav.webhookDebug",
+        icon: <WebhookIcon />,
+        path: "/webhook-debug",
+      },
+      { labelKey: "nav.secrets", icon: <VpnKeyIcon />, path: "/secrets" },
+    ],
+  },
+  {
+    labelKey: "nav.group.monitoring",
+    items: [
+      { labelKey: "nav.analytics", icon: <BarChartIcon />, path: "/analytics" },
+      {
+        labelKey: "nav.bandwidth",
+        icon: <NetworkCheckIcon />,
+        path: "/bandwidth",
+      },
+      {
+        labelKey: "nav.infrastructure",
+        icon: <AccountTreeIcon />,
+        path: "/infrastructure",
+      },
+      { labelKey: "nav.logs", icon: <SubjectIcon />, path: "/logs" },
+    ],
+  },
+  {
+    labelKey: "nav.group.management",
+    items: [
+      { labelKey: "nav.approvals", icon: <GppGoodIcon />, path: "/approvals" },
+      { labelKey: "nav.activity", icon: <HistoryIcon />, path: "/activity" },
+      { labelKey: "nav.users", icon: <PeopleIcon />, path: "/users" },
+      { labelKey: "nav.settings", icon: <SettingsIcon />, path: "/settings" },
+    ],
+  },
 ];
+
+const endUserNavSections: NavSection[] = [
+  {
+    labelKey: "",
+    items: [
+      {
+        labelKey: "nav.enduser.dashboard",
+        icon: <DashboardIcon />,
+        path: "/dashboard",
+      },
+      {
+        labelKey: "nav.enduser.smartDeploy",
+        icon: <RocketLaunchIcon />,
+        path: "/smart-deploy",
+      },
+      {
+        labelKey: "nav.enduser.mySites",
+        icon: <PublicIcon />,
+        path: "/projects",
+      },
+    ],
+  },
+  {
+    labelKey: "",
+    items: [
+      {
+        labelKey: "nav.enduser.analytics",
+        icon: <BarChartIcon />,
+        path: "/analytics",
+      },
+      {
+        labelKey: "nav.enduser.settings",
+        icon: <SettingsIcon />,
+        path: "/settings",
+      },
+    ],
+  },
+];
+
+const getNavSections = (mode: InterfaceMode) =>
+  mode === "enduser" ? endUserNavSections : devNavSections;
+
+// Flat list for getPageTitle & bottom nav
+const devNavItems = devNavSections.flatMap((s) => s.items);
+const endUserNavItems = endUserNavSections.flatMap((s) => s.items);
 
 const Layout: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const { mode, toggleTheme, sidebarPosition, mobileLayout } = useThemeMode();
+  const {
+    mode,
+    toggleTheme,
+    sidebarPosition,
+    mobileLayout,
+    interfaceMode,
+    setInterfaceMode,
+  } = useThemeMode();
   const isDark = mode === "dark";
   const { i18n, t } = useTranslation();
   const theme = useTheme();
+  const navSections = getNavSections(interfaceMode);
+  const navItems = interfaceMode === "enduser" ? endUserNavItems : devNavItems;
 
   const toggleLang = () => {
     const next = i18n.language === "en" ? "vi" : "en";
@@ -143,140 +260,293 @@ const Layout: React.FC = () => {
   }, [location.pathname]);
 
   const drawerContent = (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Logo */}
-      <Box sx={{ p: 2.5, display: "flex", alignItems: "center", gap: 1.5 }}>
-        <Avatar
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        overflow: "hidden",
+      }}
+    >
+      {/* ── Workspace Header (Notion-style) ── */}
+      <Box
+        sx={{
+          px: 1.5,
+          pt: 1.5,
+          pb: 1,
+        }}
+      >
+        <Box
           sx={{
-            width: 36,
-            height: 36,
-            bgcolor: "primary.main",
-            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-            boxShadow: `0 0 20px ${theme.palette.primary.main}4D`,
+            display: "flex",
+            alignItems: "center",
+            gap: 1.25,
+            px: 1,
+            py: 0.75,
+            borderRadius: 1.5,
+            cursor: "pointer",
+            transition: "background 0.12s ease",
+            "&:hover": {
+              bgcolor: isDark ? "rgba(255,255,255,0.055)" : "rgba(0,0,0,0.04)",
+            },
           }}
         >
-          <RocketLaunchIcon sx={{ fontSize: 20 }} />
-        </Avatar>
-        <Typography
-          variant="h6"
-          sx={{
-            fontSize: 16,
-            fontWeight: 700,
-            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}
-        >
-          Pulse
-        </Typography>
-      </Box>
-
-      <Divider />
-
-      {/* Nav Items */}
-      <List sx={{ flex: 1, px: 1.5, py: 2 }}>
-        {navItems.map((item) => (
-          <ListItemButton
-            key={item.path}
-            component={NavLink}
-            to={item.path}
-            selected={
-              item.path === "/"
-                ? location.pathname === "/"
-                : location.pathname.startsWith(item.path)
-            }
-            onClick={() => setMobileOpen(false)}
+          <Avatar
             sx={{
-              borderRadius: 2.5,
-              mb: 0.5,
-              "&.Mui-selected": {
-                bgcolor: "var(--primary-main-15)",
-                color: "primary.light",
-                "& .MuiListItemIcon-root": { color: "primary.light" },
-              },
-              "&:hover": { bgcolor: "action.hover" },
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 40, color: "text.secondary" }}>
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText
-              primary={t(item.labelKey)}
-              primaryTypographyProps={{ fontSize: 14, fontWeight: 500 }}
-            />
-          </ListItemButton>
-        ))}
-      </List>
-
-      {/* Logout */}
-      <List sx={{ px: 1.5 }}>
-        <ListItemButton
-          onClick={() => setLogoutOpen(true)}
-          sx={{
-            borderRadius: 2.5,
-            "&:hover": { bgcolor: "rgba(239,68,68,0.1)" },
-          }}
-        >
-          <ListItemIcon sx={{ minWidth: 40, color: "error.main" }}>
-            <LogoutIcon />
-          </ListItemIcon>
-          <ListItemText
-            primary={t("auth.logout")}
-            primaryTypographyProps={{
+              width: 28,
+              height: 28,
+              borderRadius: 1,
+              bgcolor: "primary.main",
               fontSize: 14,
-              fontWeight: 500,
-              color: "error.main",
-            }}
-          />
-        </ListItemButton>
-      </List>
-
-      <Divider />
-
-      {/* User */}
-      <Box sx={{ p: 2, display: "flex", alignItems: "center", gap: 1.5 }}>
-        <Avatar
-          sx={{
-            width: 36,
-            height: 36,
-            bgcolor: "primary.main",
-            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-            fontSize: 14,
-            fontWeight: 600,
-          }}
-        >
-          {user?.username?.charAt(0).toUpperCase()}
-        </Avatar>
-        <Box>
-          <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
-            {user?.username}
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: 11,
-              color: "text.secondary",
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
+              fontWeight: 700,
             }}
           >
-            {user?.role}
-          </Typography>
+            {user?.username?.charAt(0).toUpperCase()}
+          </Avatar>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography
+              sx={{
+                fontSize: 13.5,
+                fontWeight: 600,
+                lineHeight: 1.2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {user?.username}
+            </Typography>
+          </Box>
         </Box>
       </Box>
-      {/* Mobile-only settings in drawer */}
-      <Box sx={{ display: { xs: "block", sm: "none" }, px: 2, py: 1 }}>
-        <Typography
-          variant="caption"
-          color="text.secondary"
+
+      {/* ── Mode Switcher ── */}
+      <Box sx={{ px: 1.5, pb: 1 }}>
+        <Box
           sx={{
-            fontWeight: 600,
-            textTransform: "uppercase",
-            mb: 1,
-            display: "block",
+            display: "flex",
+            borderRadius: 2,
+            bgcolor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
+            p: 0.4,
+            gap: 0.4,
           }}
         >
-          {t("settings.appearance")}
-        </Typography>
+          {[
+            {
+              key: "developer" as InterfaceMode,
+              icon: <CodeIcon sx={{ fontSize: 14 }} />,
+              label: "Pro",
+            },
+            {
+              key: "enduser" as InterfaceMode,
+              icon: <PersonIcon sx={{ fontSize: 14 }} />,
+              label: "Simple",
+            },
+          ].map((m) => (
+            <Box
+              key={m.key}
+              onClick={() => {
+                setInterfaceMode(m.key);
+                navigate("/dashboard");
+              }}
+              sx={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 0.5,
+                py: 0.6,
+                px: 1,
+                borderRadius: 1.5,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                fontSize: 11.5,
+                fontWeight: interfaceMode === m.key ? 600 : 400,
+                color:
+                  interfaceMode === m.key ? "text.primary" : "text.secondary",
+                bgcolor:
+                  interfaceMode === m.key
+                    ? isDark
+                      ? "rgba(255,255,255,0.1)"
+                      : "rgba(255,255,255,0.9)"
+                    : "transparent",
+                boxShadow:
+                  interfaceMode === m.key
+                    ? isDark
+                      ? "0 1px 3px rgba(0,0,0,0.3)"
+                      : "0 1px 3px rgba(0,0,0,0.08)"
+                    : "none",
+                "&:hover": {
+                  bgcolor:
+                    interfaceMode === m.key
+                      ? isDark
+                        ? "rgba(255,255,255,0.1)"
+                        : "rgba(255,255,255,0.9)"
+                      : isDark
+                        ? "rgba(255,255,255,0.06)"
+                        : "rgba(0,0,0,0.06)",
+                },
+              }}
+            >
+              {m.icon}
+              {m.label}
+            </Box>
+          ))}
+        </Box>
+      </Box>
+
+      {/* ── Scrollable Nav ── */}
+      <Box
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+          minHeight: 0,
+          px: 1,
+          pb: 0.5,
+          "&::-webkit-scrollbar": { width: 4 },
+          "&::-webkit-scrollbar-track": { bgcolor: "transparent" },
+          "&::-webkit-scrollbar-thumb": {
+            bgcolor: "transparent",
+            borderRadius: 100,
+            transition: "background 0.2s",
+          },
+          "&:hover::-webkit-scrollbar-thumb": {
+            bgcolor: "rgba(128,128,128,0.2)",
+          },
+        }}
+      >
+        {navSections.map((section, sIdx) => (
+          <Box key={sIdx}>
+            {/* Section label */}
+            {section.labelKey ? (
+              <Typography
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "text.secondary",
+                  opacity: 0.55,
+                  px: 1,
+                  pt: sIdx === 1 ? 1 : 1.5,
+                  pb: 0.3,
+                  userSelect: "none",
+                }}
+              >
+                {t(section.labelKey)}
+              </Typography>
+            ) : null}
+
+            {/* Items */}
+            <List disablePadding>
+              {section.items.map((item) => {
+                const isActive =
+                  item.path === "/"
+                    ? location.pathname === "/"
+                    : location.pathname.startsWith(item.path);
+                return (
+                  <ListItemButton
+                    key={item.path}
+                    component={NavLink}
+                    to={item.path}
+                    selected={isActive}
+                    onClick={() => setMobileOpen(false)}
+                    sx={{
+                      py: 0.4,
+                      px: 1,
+                      minHeight: 32,
+                      borderRadius: 1.5,
+                      gap: 0.75,
+                      transition: "background 0.1s ease",
+                      "&.Mui-selected": {
+                        bgcolor: isDark
+                          ? "rgba(255,255,255,0.08)"
+                          : "rgba(0,0,0,0.06)",
+                        "&:hover": {
+                          bgcolor: isDark
+                            ? "rgba(255,255,255,0.1)"
+                            : "rgba(0,0,0,0.08)",
+                        },
+                        "& .MuiListItemText-primary": {
+                          fontWeight: 600,
+                        },
+                      },
+                      "&:hover": {
+                        bgcolor: isDark
+                          ? "rgba(255,255,255,0.055)"
+                          : "rgba(0,0,0,0.04)",
+                      },
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 0,
+                        mr: 0.75,
+                        color: isActive ? "text.primary" : "text.secondary",
+                        opacity: isActive ? 1 : 0.7,
+                        "& .MuiSvgIcon-root": { fontSize: 18 },
+                      }}
+                    >
+                      {item.icon}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={t(item.labelKey)}
+                      primaryTypographyProps={{
+                        fontSize: 13.5,
+                        fontWeight: isActive ? 600 : 400,
+                        color: isActive ? "text.primary" : "text.secondary",
+                      }}
+                    />
+                  </ListItemButton>
+                );
+              })}
+            </List>
+          </Box>
+        ))}
+      </Box>
+
+      {/* ── Bottom Actions ── */}
+      <Box sx={{ px: 1, pb: 1.5 }}>
+        <List disablePadding>
+          <ListItemButton
+            onClick={() => setLogoutOpen(true)}
+            sx={{
+              py: 0.4,
+              px: 1,
+              minHeight: 32,
+              borderRadius: 1.5,
+              gap: 0.75,
+              transition: "background 0.1s ease",
+              "&:hover": {
+                bgcolor: isDark
+                  ? "rgba(255,255,255,0.055)"
+                  : "rgba(0,0,0,0.04)",
+              },
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: 0,
+                mr: 0.75,
+                color: "text.secondary",
+                opacity: 0.7,
+                "& .MuiSvgIcon-root": { fontSize: 18 },
+              }}
+            >
+              <LogoutIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={t("auth.logout")}
+              primaryTypographyProps={{
+                fontSize: 13.5,
+                fontWeight: 400,
+                color: "text.secondary",
+              }}
+            />
+          </ListItemButton>
+        </List>
+      </Box>
+
+      {/* Mobile-only settings in drawer */}
+      <Box sx={{ display: { xs: "block", sm: "none" }, px: 2, py: 1 }}>
         <Box sx={{ display: "flex", gap: 0.5 }}>
           <Button
             variant="outlined"
@@ -425,7 +695,8 @@ const Layout: React.FC = () => {
             },
             width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
             bgcolor: "var(--appbar-bg)",
-            backdropFilter: "blur(20px)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
             boxShadow: "none",
             borderBottom: "1px solid",
             borderColor: "divider",
@@ -572,7 +843,11 @@ const Layout: React.FC = () => {
             }}
           >
             {[
-              { labelKey: "nav.dashboard", icon: <DashboardIcon />, path: "/" },
+              {
+                labelKey: "nav.dashboard",
+                icon: <DashboardIcon />,
+                path: "/dashboard",
+              },
               { labelKey: "nav.servers", icon: <DnsIcon />, path: "/servers" },
               {
                 labelKey: "nav.projects",

@@ -201,15 +201,20 @@ const RemoteTerminal: React.FC<RemoteTerminalProps> = ({
     const observer = new ResizeObserver(() => {
       if (fitAddonRef.current && xtermRef.current) {
         try {
+          // Skip resizing when the container is hidden (display: none)
+          // to prevent xterm from collapsing to 2 columns and breaking text reflow
+          if (elem.clientWidth === 0 || elem.clientHeight === 0) return;
           fitAddonRef.current.fit();
           const { rows, cols } = xtermRef.current;
-          socket?.emit("terminal:resize", { rows, cols });
+          if (rows > 0 && cols > 0) {
+            socket?.emit("terminal:resize", { termId, rows, cols });
+          }
         } catch (e) {}
       }
     });
     observer.observe(elem);
     return () => observer.disconnect();
-  }, []);
+  }, [termId]);
 
   return (
     <Box

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useDeferredValue } from "react";
 import {
   Box,
   Typography,
@@ -38,6 +38,7 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
+  TablePagination,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import Skeleton from "@mui/material/Skeleton";
@@ -85,6 +86,19 @@ interface PortEntry {
   name: string;
 }
 
+interface FwRule {
+  id: string;
+  to: string;
+  action: string;
+  from: string;
+}
+
+interface FwStatus {
+  installed: boolean;
+  active: boolean;
+  rules: FwRule[];
+}
+
 interface ProcessDetails {
   cpu: string;
   mem: string;
@@ -99,6 +113,7 @@ const PortManager: React.FC = () => {
   const { selectedServer } = useServer();
   const [ports, setPorts] = useState<PortEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fwStatus, setFwStatus] = useState<FwStatus | null>(null);
   const [killDialogOpen, setKillDialogOpen] = useState(false);
   const [procToKill, setProcToKill] = useState<PortEntry | null>(null);
 
@@ -108,17 +123,35 @@ const PortManager: React.FC = () => {
   const [procDetails, setProcDetails] = useState<ProcessDetails | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  // Firewall Dialog
+  const [fwDialogOpen, setFwDialogOpen] = useState(false);
+  const [fwAction, setFwAction] = useState<"allow" | "deny">("allow");
+  const [fwLoading, setFwLoading] = useState(false);
+
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [protocolFilter, setProtocolFilter] = useState("all");
   const [autoRefresh, setAutoRefresh] = useState(false);
+
+  // Pagination
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(15);
 
   const fetchPorts = async () => {
     if (!selectedServer) return;
     setLoading(true);
     try {
-      const res = await api.get(`/ports/${selectedServer._id}`);
-      setPorts(res.data);
+      const [portsRes, fwRes] = await Promise.all([
+        api.get(`/ports/${selectedServer._id}`),
+        api
+          .get(`/ports/${selectedServer._id}/fw`)
+          .catch(() => ({
+            data: { installed: false, active: false, rules: [] },
+          })),
+      ]);
+      setPorts(portsRes.data);
+      setFwStatus(fwRes.data);
     } catch (err: any) {
       console.error(err);
       toast.error(
@@ -158,6 +191,40 @@ const PortManager: React.FC = () => {
         err.response?.data?.message ||
           t("ports.killFailed", "Failed to kill process"),
       );
+    }
+  };
+
+  const handleManageFirewall = async () => {
+    if (!selectedServer || !selectedProc) return;
+
+    // Attempt to extract port number from 'name' (e.g. *:8317 (LISTEN) -> 8317)
+    const portMatch = selectedProc.name.match(/:(\d+)/);
+    if (!portMatch) {
+      toast.error("Could not determine port number from process name");
+      return;
+    }
+    const portNumber = portMatch[1];
+    const protocol = selectedProc.node.toLowerCase().includes("udp")
+      ? "udp"
+      : "tcp";
+
+    setFwLoading(true);
+    try {
+      const res = await api.post(`/ports/${selectedServer._id}/fw`, {
+        port: portNumber,
+        protocol: protocol,
+        action: fwAction,
+      });
+      toast.success(
+        res.data.message || `Firewall rule updated: ${fwAction} ${portNumber}`,
+      );
+      setFwDialogOpen(false);
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Failed to update firewall rule",
+      );
+    } finally {
+      setFwLoading(false);
     }
   };
 
@@ -220,8 +287,8 @@ const PortManager: React.FC = () => {
     let filtered = ports;
 
     // Search
-    if (searchQuery) {
-      const lower = searchQuery.toLowerCase();
+    if (deferredSearchQuery) {
+      const lower = deferredSearchQuery.toLowerCase();
       filtered = filtered.filter(
         (p) =>
           p.command.toLowerCase().includes(lower) ||
@@ -278,7 +345,26 @@ const PortManager: React.FC = () => {
       },
       chartData: { protocolData, userData },
     };
-  }, [ports, searchQuery, protocolFilter, theme]);
+  }, [ports, deferredSearchQuery, protocolFilter, theme]);
+
+  // Derived for pagination
+  const paginatedPorts = useMemo(() => {
+    return filteredPorts.slice(
+      page * rowsPerPage,
+      page * rowsPerPage + rowsPerPage,
+    );
+  }, [filteredPorts, page, rowsPerPage]);
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   // If no server selected
   if (!selectedServer) {
@@ -698,7 +784,10 @@ const PortManager: React.FC = () => {
             )}
             variant="outlined"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(0); // Reset page on search
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -714,7 +803,10 @@ const PortManager: React.FC = () => {
             <Select
               label={t("ports.protocol", "Protocol")}
               value={protocolFilter}
-              onChange={(e) => setProtocolFilter(e.target.value)}
+              onChange={(e) => {
+                setProtocolFilter(e.target.value);
+                setPage(0); // Reset page on filter
+              }}
               startAdornment={
                 <InputAdornment position="start">
                   <FilterListIcon fontSize="small" />
@@ -813,7 +905,7 @@ const PortManager: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPorts.map((port, index) => (
+                paginatedPorts.map((port, index) => (
                   <TableRow
                     key={`${port.pid}-${index}`}
                     hover
@@ -872,21 +964,90 @@ const PortManager: React.FC = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={port.node}
-                        size="small"
-                        sx={{
-                          borderRadius: 1,
-                          bgcolor: port.node.toLowerCase().includes("tcp")
-                            ? alpha(theme.palette.info.main, 0.1)
-                            : alpha(theme.palette.secondary.main, 0.1),
-                          color: port.node.toLowerCase().includes("tcp")
-                            ? "info.main"
-                            : "secondary.main",
-                          fontWeight: 600,
-                          fontSize: "0.7rem",
-                        }}
-                      />
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <Chip
+                          label={port.node}
+                          size="small"
+                          sx={{
+                            borderRadius: 1,
+                            bgcolor: port.node.toLowerCase().includes("tcp")
+                              ? alpha(theme.palette.info.main, 0.1)
+                              : alpha(theme.palette.secondary.main, 0.1),
+                            color: port.node.toLowerCase().includes("tcp")
+                              ? "info.main"
+                              : "secondary.main",
+                            fontWeight: 600,
+                            fontSize: "0.7rem",
+                          }}
+                        />
+                        {/* UFW Status Logic */}
+                        {(() => {
+                          if (!fwStatus || !fwStatus.installed) return null;
+                          if (!fwStatus.active) {
+                            return (
+                              <Tooltip title="UFW is installed but INACTIVE. All ports might be fully exposed.">
+                                <Chip
+                                  label="UFW Inactive"
+                                  size="small"
+                                  color="warning"
+                                  variant="outlined"
+                                  sx={{ height: 20, fontSize: "0.65rem" }}
+                                />
+                              </Tooltip>
+                            );
+                          }
+                          // UFW is active. Check if port is in the rules
+                          const pMatch = port.name.match(/:(\d+)/);
+                          if (pMatch) {
+                            const pNum = pMatch[1];
+                            const pType = port.node
+                              .toLowerCase()
+                              .includes("udp")
+                              ? "udp"
+                              : "tcp";
+                            const exactStr = `${pNum}/${pType}`;
+
+                            const rulesForPort = fwStatus.rules.filter(
+                              (r) => r.to === exactStr || r.to === pNum,
+                            );
+                            const allowed = rulesForPort.some(
+                              (r) =>
+                                r.action === "ALLOW IN" &&
+                                r.from.toLowerCase() !== "127.0.0.1",
+                            );
+
+                            if (allowed) {
+                              return (
+                                <Tooltip title="Port is publicly allowed by UFW firewall">
+                                  <Chip
+                                    label="Public IN"
+                                    size="small"
+                                    color="success"
+                                    variant="outlined"
+                                    sx={{ height: 20, fontSize: "0.65rem" }}
+                                  />
+                                </Tooltip>
+                              );
+                            } else {
+                              // If UFW is active and no explicit allow rule, it's generally closed from outside unless Docker circumvents it
+                              return (
+                                <Tooltip title="No specific UFW allow rule found. If not managed by Docker, it may be blocked externally.">
+                                  <Chip
+                                    label="Private / Blocked"
+                                    size="small"
+                                    color="default"
+                                    variant="outlined"
+                                    sx={{ height: 20, fontSize: "0.65rem" }}
+                                  />
+                                </Tooltip>
+                              );
+                            }
+                          }
+                          return null;
+                        })()}
+                      </Box>
                     </TableCell>
                     <TableCell>
                       <Typography
@@ -904,25 +1065,53 @@ const PortManager: React.FC = () => {
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
-                      <Tooltip title={t("ports.killProcess", "Kill Process")}>
-                        <IconButton
-                          color="error"
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setProcToKill(port);
-                            setKillDialogOpen(true);
-                          }}
-                          sx={{
-                            border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
-                            "&:hover": {
-                              bgcolor: alpha(theme.palette.error.main, 0.1),
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "flex-end",
+                          gap: 1,
+                        }}
+                      >
+                        <Tooltip title="Manage Firewall (UFW)">
+                          <IconButton
+                            color="primary"
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedProc(port);
+                              setFwAction("allow"); // Default
+                              setFwDialogOpen(true);
+                            }}
+                            sx={{
+                              border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                              "&:hover": {
+                                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                              },
+                            }}
+                          >
+                            <SecurityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title={t("ports.killProcess", "Kill Process")}>
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProcToKill(port);
+                              setKillDialogOpen(true);
+                            }}
+                            sx={{
+                              border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+                              "&:hover": {
+                                bgcolor: alpha(theme.palette.error.main, 0.1),
+                              },
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))
@@ -930,21 +1119,16 @@ const PortManager: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
-        <Box
-          sx={{
-            mt: 2,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography variant="caption" color="text.secondary">
-            {t("ports.showingCount", {
-              count: filteredPorts.length,
-              total: ports.length,
-            })}
-          </Typography>
-        </Box>
+        <TablePagination
+          rowsPerPageOptions={[15, 25, 50, 100]}
+          component="div"
+          count={filteredPorts.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          labelRowsPerPage={t("common.rowsPerPage", "Rows per page:")}
+        />
       </Paper>
 
       {/* Kill Confirmation Dialog */}
@@ -992,6 +1176,58 @@ const PortManager: React.FC = () => {
           </Button>
           <Button variant="contained" color="error" onClick={handleKill}>
             {t("ports.killCTA", "Kill Process")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Firewall Management Dialog */}
+      <Dialog
+        open={fwDialogOpen}
+        onClose={() => setFwDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <SecurityIcon color="primary" />
+          Manage Firewall Rule
+        </DialogTitle>
+        <DialogContent>
+          <Typography gutterBottom>
+            Configure UFW firewall for process{" "}
+            <strong>{selectedProc?.command}</strong> on{" "}
+            <strong>
+              {selectedProc?.name.match(/:(\d+)/)?.[1] || "Unknown Port"}
+            </strong>
+            .
+          </Typography>
+          <FormControl fullWidth size="small" sx={{ mt: 2 }}>
+            <InputLabel>Action</InputLabel>
+            <Select
+              value={fwAction}
+              label="Action"
+              onChange={(e) => setFwAction(e.target.value as "allow" | "deny")}
+            >
+              <MenuItem value="allow">Allow (Open Port)</MenuItem>
+              <MenuItem value="deny">Deny (Close Port)</MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFwDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleManageFirewall}
+            disabled={fwLoading}
+            startIcon={fwLoading ? <CircularProgress size={20} /> : undefined}
+          >
+            Apply Rule
           </Button>
         </DialogActions>
       </Dialog>

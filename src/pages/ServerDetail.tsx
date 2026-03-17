@@ -42,6 +42,7 @@ import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import SEO from "../components/SEO";
 import { ServerTimeMachine } from "../components/ServerTimeMachine";
 import { ServerSecurity } from "../components/ServerSecurity";
+import ServerSetup from "../components/ServerSetup";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
@@ -96,8 +97,9 @@ const ServerDetail: React.FC = () => {
     overview: 0,
     "time-machine": 1,
     security: 2,
+    setup: 3,
   };
-  const reverseTabMapping = ["overview", "time-machine", "security"];
+  const reverseTabMapping = ["overview", "time-machine", "security", "setup"];
 
   const currentTab =
     tabParam && tabMapping[tabParam] !== undefined ? tabMapping[tabParam] : 0;
@@ -151,7 +153,7 @@ const ServerDetail: React.FC = () => {
       setStatsLoading(false);
     }
   };
-  console.log(stats)
+  console.log(stats);
 
   const fetchProjects = async () => {
     try {
@@ -574,6 +576,7 @@ const ServerDetail: React.FC = () => {
           <Tab label="Overview & Terminal" />
           <Tab label="Time Machine" />
           <Tab label={t("security.tabTitle", "Security & Compliance")} />
+          <Tab label={t("serverSetup.tabTitle", "Setup")} />
         </Tabs>
       </Box>
 
@@ -1058,6 +1061,9 @@ const ServerDetail: React.FC = () => {
 
       {/* Security Tab */}
       {currentTab === 2 && <ServerSecurity serverId={server._id} />}
+
+      {/* Setup Tab */}
+      {currentTab === 3 && <ServerSetup serverId={server._id} />}
 
       {/* Edit Drawer */}
       <Drawer

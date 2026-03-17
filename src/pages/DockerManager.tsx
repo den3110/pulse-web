@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -23,7 +23,16 @@ import {
   Skeleton,
   useTheme,
   Autocomplete,
+  Alert,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  ToggleButtonGroup,
+  ToggleButton,
 } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ViewListIcon from "@mui/icons-material/ViewList";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import StopIcon from "@mui/icons-material/Stop";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
@@ -34,6 +43,8 @@ import DownloadIcon from "@mui/icons-material/Download";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import ViewInArIcon from "@mui/icons-material/ViewInAr";
 import SearchIcon from "@mui/icons-material/Search";
+import StarIcon from "@mui/icons-material/Star";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import SEO from "../components/SEO";
 import { useServer } from "../contexts/ServerContext";
 
@@ -60,6 +71,7 @@ interface DockerContainer {
   size: string;
   networks: string;
   command: string;
+  composeProject: string;
 }
 
 interface DockerImage {
@@ -105,6 +117,9 @@ const DockerManager: React.FC = () => {
     version?: string;
   } | null>(null);
   const [search, setSearch] = useState("");
+  const [containerView, setContainerView] = useState<"flat" | "grouped">(
+    "grouped",
+  );
   const [logDrawer, setLogDrawer] = useState<{
     open: boolean;
     containerId: string;
@@ -135,9 +150,11 @@ const DockerManager: React.FC = () => {
     env: [] as { key: string; value: string }[],
   });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
 
   const handleRunContainer = async () => {
     setActionLoading("running");
+    setRunError(null);
     try {
       await api.post(`/docker/${serverId}/containers/run`, runConfig);
       toast.success("Container started successfully");
@@ -145,7 +162,7 @@ const DockerManager: React.FC = () => {
       fetchData();
       setTab(0); // Switch to containers tab
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to start container");
+      setRunError(error.response?.data?.message || "Failed to start container");
     } finally {
       setActionLoading(null);
     }
@@ -380,6 +397,47 @@ const DockerManager: React.FC = () => {
       img.tag.toLowerCase().includes(search.toLowerCase()),
   );
 
+  const parsedPorts = React.useMemo(() => {
+    const allPorts: any[] = [];
+    const seenStr = new Set<string>();
+    filteredContainers.forEach((c) => {
+      if (!c.ports) return;
+      const portPairs = c.ports.split(", ");
+      portPairs.forEach((pair) => {
+        if (pair.includes("->")) {
+          const [hostPart, containerPart] = pair.split("->");
+          const [containerPort, protocol] = containerPart.split("/");
+
+          const hostIpMatch = hostPart.lastIndexOf(":");
+          let hostIp = "";
+          let hostPort = "";
+          if (hostIpMatch !== -1) {
+            hostIp = hostPart.substring(0, hostIpMatch);
+            hostPort = hostPart.substring(hostIpMatch + 1);
+          } else {
+            hostPort = hostPart;
+          }
+
+          const uniqueKey = `${hostPort}:${containerPort}:${protocol}:${c.id}`;
+          if (!seenStr.has(uniqueKey)) {
+            seenStr.add(uniqueKey);
+            allPorts.push({
+              containerId: c.id,
+              containerName: c.name,
+              hostIp: hostIp || "0.0.0.0",
+              hostPort,
+              containerPort,
+              protocol,
+              state: c.state,
+            });
+          }
+        }
+      });
+    });
+    allPorts.sort((a, b) => parseInt(a.hostPort) - parseInt(b.hostPort));
+    return allPorts;
+  }, [filteredContainers]);
+
   const getStats = (containerId: string) =>
     stats.find(
       (s) =>
@@ -506,271 +564,400 @@ const DockerManager: React.FC = () => {
           label={`${t("docker.containers", "Containers")} (${containers.length})`}
         />
         <Tab label={`${t("docker.images", "Images")} (${images.length})`} />
+        <Tab
+          label={`${t("docker.portsTab", "Ports")} (${parsedPorts.length})`}
+        />
       </Tabs>
 
       {/* Containers Tab */}
-      {tab === 0 && (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-          {filteredContainers.length === 0 ? (
-            <Card>
-              <CardContent sx={{ textAlign: "center", py: 4 }}>
-                <Typography color="text.secondary">
-                  {t("docker.noContainers", "No containers found")}
-                </Typography>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredContainers.map((container) => {
-              const cs = getStats(container.id);
-              return (
-                <Card
-                  key={container.id}
-                  sx={{
-                    transition: "all 0.2s",
-                    "&:hover": {
-                      bgcolor: "rgba(255,255,255,0.02)",
-                      transform: "translateY(-1px)",
-                    },
-                  }}
-                >
-                  <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 2,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      {/* Name + Status */}
-                      <Box sx={{ flex: 1, minWidth: 200 }}>
-                        <Box
+      {tab === 0 &&
+        (() => {
+          // Group containers by compose project
+          const grouped = new Map<string, DockerContainer[]>();
+          const standalone: DockerContainer[] = [];
+          filteredContainers.forEach((c) => {
+            if (c.composeProject) {
+              if (!grouped.has(c.composeProject))
+                grouped.set(c.composeProject, []);
+              grouped.get(c.composeProject)!.push(c);
+            } else {
+              standalone.push(c);
+            }
+          });
+
+          const renderContainerCard = (container: DockerContainer) => {
+            const cs = getStats(container.id);
+            return (
+              <Card
+                key={container.id}
+                sx={{
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    bgcolor: "rgba(255,255,255,0.02)",
+                    transform: "translateY(-1px)",
+                  },
+                }}
+              >
+                <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {/* Name + Status */}
+                    <Box sx={{ flex: 1, minWidth: 200 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          mb: 0.5,
+                        }}
+                      >
+                        <Typography
+                          variant="subtitle2"
+                          fontWeight={600}
                           sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                            mb: 0.5,
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: 13,
                           }}
                         >
-                          <Typography
-                            variant="subtitle2"
-                            fontWeight={600}
-                            sx={{
-                              fontFamily: "'JetBrains Mono', monospace",
-                              fontSize: 13,
-                            }}
-                          >
-                            {container.name}
-                          </Typography>
-                          <Chip
-                            label={container.state}
-                            size="small"
-                            color={stateColor[container.state] || "default"}
-                            variant="outlined"
-                            sx={{ fontSize: 10, height: 20 }}
-                          />
-                        </Box>
+                          {container.name}
+                        </Typography>
+                        <Chip
+                          label={container.state}
+                          size="small"
+                          color={stateColor[container.state] || "default"}
+                          variant="outlined"
+                          sx={{ fontSize: 10, height: 20 }}
+                        />
+                      </Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: 11,
+                        }}
+                      >
+                        {container.image}
+                      </Typography>
+                    </Box>
+
+                    {/* Ports */}
+                    {container.ports && (
+                      <Box sx={{ minWidth: 120 }}>
                         <Typography
                           variant="caption"
                           color="text.secondary"
+                          display="block"
+                          sx={{ fontSize: 10 }}
+                        >
+                          {t("dockerManager.ports", "Ports")}
+                        </Typography>
+                        <Typography
+                          variant="caption"
                           sx={{
                             fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: 11,
+                            fontSize: 10,
+                            wordBreak: "break-all",
                           }}
                         >
-                          {container.image}
+                          {container.ports.length > 50
+                            ? container.ports.substring(0, 50) + "..."
+                            : container.ports}
                         </Typography>
                       </Box>
+                    )}
 
-                      {/* Ports */}
-                      {container.ports && (
-                        <Box sx={{ minWidth: 120 }}>
+                    {/* Stats */}
+                    {cs && (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 2,
+                          minWidth: 180,
+                        }}
+                      >
+                        <Box>
                           <Typography
                             variant="caption"
                             color="text.secondary"
                             display="block"
                             sx={{ fontSize: 10 }}
                           >
-                            {t("dockerManager.ports", "Ports")}</Typography>
+                            {t("dockerManager.cPU", "CPU")}
+                          </Typography>
                           <Typography
                             variant="caption"
-                            sx={{
-                              fontFamily: "'JetBrains Mono', monospace",
-                              fontSize: 10,
-                              wordBreak: "break-all",
-                            }}
+                            fontWeight={600}
+                            sx={{ fontSize: 11 }}
                           >
-                            {container.ports.length > 50
-                              ? container.ports.substring(0, 50) + "..."
-                              : container.ports}
+                            {cs.cpuPercent}
                           </Typography>
                         </Box>
-                      )}
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            display="block"
+                            sx={{ fontSize: 10 }}
+                          >
+                            {t("dockerManager.mEM", "MEM")}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            fontWeight={600}
+                            sx={{ fontSize: 11 }}
+                          >
+                            {cs.memUsage}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    )}
 
-                      {/* Stats */}
-                      {cs && (
-                        <Box
+                    {/* Status text */}
+                    <Box sx={{ minWidth: 100 }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ fontSize: 10 }}
+                      >
+                        {container.status}
+                      </Typography>
+                    </Box>
+
+                    {/* Actions */}
+                    <Box sx={{ display: "flex", gap: 0.5 }}>
+                      {container.state !== "running" && (
+                        <Tooltip title="Start">
+                          <IconButton
+                            size="small"
+                            color="success"
+                            onClick={() => handleAction(container.id, "start")}
+                            disabled={actionLoading === `${container.id}-start`}
+                          >
+                            {actionLoading === `${container.id}-start` ? (
+                              <CircularProgress size={16} color="inherit" />
+                            ) : (
+                              <PlayArrowIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {container.state === "running" && (
+                        <Tooltip title="Stop">
+                          <IconButton
+                            size="small"
+                            color="warning"
+                            onClick={() => handleAction(container.id, "stop")}
+                            disabled={actionLoading === `${container.id}-stop`}
+                          >
+                            {actionLoading === `${container.id}-stop` ? (
+                              <CircularProgress size={16} color="inherit" />
+                            ) : (
+                              <StopIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      <Tooltip title="Restart">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleAction(container.id, "restart")}
+                          disabled={actionLoading === `${container.id}-restart`}
+                        >
+                          {actionLoading === `${container.id}-restart` ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : (
+                            <RestartAltIcon fontSize="small" />
+                          )}
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Logs">
+                        <IconButton
+                          size="small"
+                          onClick={() => openLogs(container.id, container.name)}
+                        >
+                          <DescriptionIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Inspect">
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            openInspect(container.id, container.name)
+                          }
+                        >
+                          <InfoIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Remove">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() =>
+                            setConfirmDialog({
+                              open: true,
+                              id: container.id,
+                              action: "remove_container",
+                              name: container.name,
+                            })
+                          }
+                          disabled={actionLoading === `${container.id}-remove`}
+                        >
+                          {actionLoading === `${container.id}-remove` ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : (
+                            <DeleteIcon fontSize="small" />
+                          )}
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            );
+          };
+
+          return (
+            <Box>
+              {/* View toggle */}
+              <Box
+                sx={{ display: "flex", justifyContent: "flex-end", mb: 1.5 }}
+              >
+                <ToggleButtonGroup
+                  size="small"
+                  value={containerView}
+                  exclusive
+                  onChange={(_, v) => v && setContainerView(v)}
+                >
+                  <ToggleButton value="flat">
+                    <Tooltip title="Flat view">
+                      <ViewListIcon fontSize="small" />
+                    </Tooltip>
+                  </ToggleButton>
+                  <ToggleButton value="grouped">
+                    <Tooltip title="Grouped by project">
+                      <AccountTreeIcon fontSize="small" />
+                    </Tooltip>
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+
+              {filteredContainers.length === 0 ? (
+                <Card>
+                  <CardContent sx={{ textAlign: "center", py: 4 }}>
+                    <Typography color="text.secondary">
+                      {t("docker.noContainers", "No containers found")}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ) : containerView === "flat" ? (
+                /* ── Flat view ── */
+                <Box
+                  sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
+                >
+                  {filteredContainers.map(renderContainerCard)}
+                </Box>
+              ) : (
+                /* ── Grouped view ── */
+                <Box
+                  sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
+                >
+                  {/* Compose projects */}
+                  {Array.from(grouped.entries()).map(
+                    ([project, projectContainers]) => {
+                      const running = projectContainers.filter(
+                        (c) => c.state === "running",
+                      ).length;
+                      return (
+                        <Accordion
+                          key={project}
+                          defaultExpanded
+                          disableGutters
                           sx={{
-                            display: "flex",
-                            gap: 2,
-                            minWidth: 180,
+                            bgcolor: "background.paper",
+                            "&:before": { display: "none" },
+                            borderRadius: "8px !important",
+                            border: "1px solid",
+                            borderColor: "divider",
+                            overflow: "hidden",
                           }}
                         >
-                          <Box>
+                          <AccordionSummary
+                            expandIcon={<ExpandMoreIcon />}
+                            sx={{
+                              px: 2,
+                              "& .MuiAccordionSummary-content": {
+                                alignItems: "center",
+                                gap: 1.5,
+                              },
+                            }}
+                          >
                             <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              display="block"
-                              sx={{ fontSize: 10 }}
+                              variant="subtitle2"
+                              fontWeight={700}
+                              sx={{
+                                fontFamily: "'JetBrains Mono', monospace",
+                                fontSize: 13,
+                              }}
                             >
-                              {t("dockerManager.cPU", "CPU")}</Typography>
-                            <Typography
-                              variant="caption"
-                              fontWeight={600}
-                              sx={{ fontSize: 11 }}
-                            >
-                              {cs.cpuPercent}
+                              📦 {project}
                             </Typography>
-                          </Box>
-                          <Box>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              display="block"
-                              sx={{ fontSize: 10 }}
-                            >
-                              {t("dockerManager.mEM", "MEM")}</Typography>
-                            <Typography
-                              variant="caption"
-                              fontWeight={600}
-                              sx={{ fontSize: 11 }}
-                            >
-                              {cs.memUsage}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      )}
+                            <Chip
+                              label={`${running}/${projectContainers.length} running`}
+                              size="small"
+                              color={
+                                running === projectContainers.length
+                                  ? "success"
+                                  : running > 0
+                                    ? "warning"
+                                    : "error"
+                              }
+                              variant="outlined"
+                              sx={{ fontSize: 10, height: 20 }}
+                            />
+                          </AccordionSummary>
+                          <AccordionDetails
+                            sx={{
+                              p: 1.5,
+                              pt: 0,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 1,
+                            }}
+                          >
+                            {projectContainers.map(renderContainerCard)}
+                          </AccordionDetails>
+                        </Accordion>
+                      );
+                    },
+                  )}
 
-                      {/* Status text */}
-                      <Box sx={{ minWidth: 100 }}>
+                  {/* Standalone containers */}
+                  {standalone.length > 0 && (
+                    <>
+                      {grouped.size > 0 && (
                         <Typography
                           variant="caption"
                           color="text.secondary"
-                          sx={{ fontSize: 10 }}
+                          sx={{ mt: 1, mb: 0.5, px: 1 }}
                         >
-                          {container.status}
+                          Standalone Containers
                         </Typography>
-                      </Box>
-
-                      {/* Actions */}
-                      <Box sx={{ display: "flex", gap: 0.5 }}>
-                        {container.state !== "running" && (
-                          <Tooltip title="Start">
-                            <IconButton
-                              size="small"
-                              color="success"
-                              onClick={() =>
-                                handleAction(container.id, "start")
-                              }
-                              disabled={
-                                actionLoading === `${container.id}-start`
-                              }
-                            >
-                              {actionLoading === `${container.id}-start` ? (
-                                <CircularProgress size={16} color="inherit" />
-                              ) : (
-                                <PlayArrowIcon fontSize="small" />
-                              )}
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        {container.state === "running" && (
-                          <Tooltip title="Stop">
-                            <IconButton
-                              size="small"
-                              color="warning"
-                              onClick={() => handleAction(container.id, "stop")}
-                              disabled={
-                                actionLoading === `${container.id}-stop`
-                              }
-                            >
-                              {actionLoading === `${container.id}-stop` ? (
-                                <CircularProgress size={16} color="inherit" />
-                              ) : (
-                                <StopIcon fontSize="small" />
-                              )}
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        <Tooltip title="Restart">
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              handleAction(container.id, "restart")
-                            }
-                            disabled={
-                              actionLoading === `${container.id}-restart`
-                            }
-                          >
-                            {actionLoading === `${container.id}-restart` ? (
-                              <CircularProgress size={16} color="inherit" />
-                            ) : (
-                              <RestartAltIcon fontSize="small" />
-                            )}
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Logs">
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              openLogs(container.id, container.name)
-                            }
-                          >
-                            <DescriptionIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Inspect">
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              openInspect(container.id, container.name)
-                            }
-                          >
-                            <InfoIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Remove">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() =>
-                              setConfirmDialog({
-                                open: true,
-                                id: container.id,
-                                action: "remove_container",
-                                name: container.name,
-                              })
-                            }
-                            disabled={
-                              actionLoading === `${container.id}-remove`
-                            }
-                          >
-                            {actionLoading === `${container.id}-remove` ? (
-                              <CircularProgress size={16} color="inherit" />
-                            ) : (
-                              <DeleteIcon fontSize="small" />
-                            )}
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </Box>
-      )}
+                      )}
+                      {standalone.map(renderContainerCard)}
+                    </>
+                  )}
+                </Box>
+              )}
+            </Box>
+          );
+        })()}
 
       {/* Images Tab */}
       {tab === 1 && (
@@ -828,7 +1015,8 @@ const DockerManager: React.FC = () => {
                         display="block"
                         sx={{ fontSize: 10 }}
                       >
-                        {t("dockerManager.size", "Size")}</Typography>
+                        {t("dockerManager.size", "Size")}
+                      </Typography>
                       <Typography variant="caption" fontWeight={600}>
                         {img.size}
                       </Typography>
@@ -840,7 +1028,8 @@ const DockerManager: React.FC = () => {
                         display="block"
                         sx={{ fontSize: 10 }}
                       >
-                        {t("dockerManager.iD", "ID")}</Typography>
+                        {t("dockerManager.iD", "ID")}
+                      </Typography>
                       <Typography
                         variant="caption"
                         sx={{
@@ -864,10 +1053,30 @@ const DockerManager: React.FC = () => {
                         <InfoIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Run Container">
+                    {containers.some((c) => {
+                      const containerImage = c.image;
+                      return (
+                        containerImage === `${img.repository}:${img.tag}` ||
+                        (containerImage === img.repository &&
+                          img.tag === "latest") ||
+                        containerImage === img.id ||
+                        containerImage.startsWith(img.id) ||
+                        img.id.startsWith(containerImage) ||
+                        containerImage.startsWith(`${img.repository}@sha256:`)
+                      );
+                    }) && (
+                      <Chip
+                        label="In Use"
+                        size="small"
+                        color="success"
+                        variant="outlined"
+                        sx={{ height: 20, fontSize: "0.65rem", mr: 1 }}
+                      />
+                    )}
+                    <Tooltip title="Run New Container">
                       <IconButton
                         size="small"
-                        color="primary"
+                        color="secondary"
                         onClick={() => {
                           setRunConfig({
                             image: `${img.repository}:${img.tag}`,
@@ -879,7 +1088,7 @@ const DockerManager: React.FC = () => {
                           setRunDialog(true);
                         }}
                       >
-                        <PlayArrowIcon fontSize="small" />
+                        <AddCircleOutlineIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Remove Image">
@@ -906,6 +1115,140 @@ const DockerManager: React.FC = () => {
         </Box>
       )}
 
+      {/* Ports Tab */}
+      {tab === 2 && (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+          {parsedPorts.length === 0 ? (
+            <Card>
+              <CardContent sx={{ textAlign: "center", py: 4 }}>
+                <Typography color="text.secondary">
+                  {t("docker.noPorts", "No mapped ports found")}
+                </Typography>
+              </CardContent>
+            </Card>
+          ) : (
+            parsedPorts.map((p, idx) => (
+              <Card
+                key={`${p.containerId}-${p.hostPort}-${idx}`}
+                sx={{
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    bgcolor: "rgba(255,255,255,0.02)",
+                    transform: "translateY(-1px)",
+                  },
+                  opacity: p.state === "running" ? 1 : 0.6,
+                }}
+              >
+                <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Box sx={{ minWidth: 150 }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                        sx={{ fontSize: 10 }}
+                      >
+                        {t("docker.hostPort", "Host Port")}
+                      </Typography>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          mb: 0.5,
+                        }}
+                      >
+                        <Typography
+                          variant="subtitle2"
+                          fontWeight={700}
+                          color="primary.main"
+                          sx={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: 13,
+                          }}
+                        >
+                          {p.hostPort}
+                        </Typography>
+                        <Chip
+                          label={p.protocol.toUpperCase()}
+                          size="small"
+                          sx={{ height: 16, fontSize: "0.6rem" }}
+                        />
+                      </Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ fontSize: 10 }}
+                      >
+                        {p.hostIp}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ minWidth: 150 }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                        sx={{ fontSize: 10, mb: 0.5 }}
+                      >
+                        {t("docker.containerPort", "Container Port")}
+                      </Typography>
+                      <Typography
+                        variant="subtitle2"
+                        fontWeight={600}
+                        sx={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: 13,
+                        }}
+                      >
+                        {p.containerPort}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 200 }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                        sx={{ fontSize: 10, mb: 0.5 }}
+                      >
+                        {t("docker.mappedContainer", "Mapped Container")}
+                      </Typography>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          sx={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: 13,
+                          }}
+                        >
+                          {p.containerName}
+                        </Typography>
+                        <Chip
+                          label={p.state}
+                          size="small"
+                          color={stateColor[p.state] || "default"}
+                          variant="outlined"
+                          sx={{ height: 18, fontSize: "0.65rem" }}
+                        />
+                      </Box>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </Box>
+      )}
+
       {/* Container Logs Drawer */}
       <Drawer
         anchor="right"
@@ -919,7 +1262,8 @@ const DockerManager: React.FC = () => {
       >
         <Box sx={{ p: 2 }}>
           <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-            {t("dockerManager.logs", "📋 Logs:")}{logDrawer.name}
+            {t("dockerManager.logs", "📋 Logs:")}
+            {logDrawer.name}
           </Typography>
           {logDrawer.loading ? (
             <CircularProgress />
@@ -958,7 +1302,8 @@ const DockerManager: React.FC = () => {
       >
         <Box sx={{ p: 2 }}>
           <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-            {t("dockerManager.inspect", "🔍 Inspect:")}{inspectDrawer.name}
+            {t("dockerManager.inspect", "🔍 Inspect:")}
+            {inspectDrawer.name}
           </Typography>
           {inspectDrawer.loading ? (
             <CircularProgress />
@@ -997,13 +1342,107 @@ const DockerManager: React.FC = () => {
         <DialogContent>
           <Autocomplete
             freeSolo
-            options={pullSuggestions.map((s) => s.repo_name)}
+            options={pullSuggestions}
+            getOptionLabel={(option) =>
+              typeof option === "string" ? option : option.repo_name
+            }
             loading={pullSearchLoading}
             disabled={pulling}
             inputValue={pullImage}
             onInputChange={(e, newInputValue) => {
               setPullImage(newInputValue);
             }}
+            renderOption={(props, option) => (
+              <Box
+                component="li"
+                {...props}
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  py: 1.5,
+                  borderBottom: "1px solid rgba(255,255,255,0.05)",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    width: "100%",
+                    mb: 0.5,
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    sx={{
+                      flexGrow: 1,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
+                  >
+                    {option.repo_name}
+                  </Typography>
+                  {option.is_official && (
+                    <Chip
+                      label="⭐ Recommended (Official)"
+                      size="small"
+                      color="primary"
+                      sx={{ height: 18, fontSize: "0.65rem", mr: 1 }}
+                    />
+                  )}
+                  {option.star_count > 0 && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        color: "text.secondary",
+                        ml: 1,
+                      }}
+                    >
+                      <StarIcon
+                        sx={{ fontSize: 16, mr: 0.5, color: "#faaf00" }}
+                      />
+                      <Typography variant="caption" fontWeight={600}>
+                        {option.star_count}
+                      </Typography>
+                    </Box>
+                  )}
+                  {option.pull_count && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        color: "text.secondary",
+                        ml: 1.5,
+                      }}
+                    >
+                      <DownloadIcon
+                        sx={{ fontSize: 16, mr: 0.4, color: "#2ea043" }}
+                      />
+                      <Typography variant="caption" fontWeight={600}>
+                        {option.pull_count}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+                {option.short_description && (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                      lineHeight: 1.4,
+                      mt: 0.5,
+                    }}
+                  >
+                    {option.short_description}
+                  </Typography>
+                )}
+              </Box>
+            )}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -1115,7 +1554,10 @@ const DockerManager: React.FC = () => {
       {/* Run Container Dialog */}
       <Dialog
         open={runDialog}
-        onClose={() => setRunDialog(false)}
+        onClose={() => {
+          setRunDialog(false);
+          setRunError(null);
+        }}
         maxWidth="md"
         fullWidth
       >
@@ -1124,10 +1566,24 @@ const DockerManager: React.FC = () => {
             sx={{ mr: 1, verticalAlign: "middle" }}
             color="primary"
           />
-          {t("dockerManager.runContainer", "Run Container:")}{runConfig.image}
+          {t("dockerManager.runContainer", "Run Container:")}
+          {runConfig.image}
         </DialogTitle>
         <DialogContent dividers>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3, pt: 1 }}>
+            {runError && (
+              <Alert
+                severity="error"
+                sx={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 12,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-all",
+                }}
+              >
+                {runError}
+              </Alert>
+            )}
             <TextField
               label="Container Name (Optional)"
               value={runConfig.name}
@@ -1155,7 +1611,8 @@ const DockerManager: React.FC = () => {
 
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                {t("dockerManager.portMappings", "Port Mappings")}</Typography>
+                {t("dockerManager.portMappings", "Port Mappings")}
+              </Typography>
               {runConfig.ports.map((port, idx) => (
                 <Box key={idx} sx={{ display: "flex", gap: 2, mb: 1 }}>
                   <TextField
@@ -1204,12 +1661,17 @@ const DockerManager: React.FC = () => {
                   })
                 }
               >
-                {t("dockerManager.addPort", "+ Add Port")}</Button>
+                {t("dockerManager.addPort", "+ Add Port")}
+              </Button>
             </Box>
 
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                {t("dockerManager.environmentVariables", "Environment Variables")}</Typography>
+                {t(
+                  "dockerManager.environmentVariables",
+                  "Environment Variables",
+                )}
+              </Typography>
               {runConfig.env.map((env, idx) => (
                 <Box key={idx} sx={{ display: "flex", gap: 2, mb: 1 }}>
                   <TextField
@@ -1254,16 +1716,21 @@ const DockerManager: React.FC = () => {
                   })
                 }
               >
-                {t("dockerManager.addEnvVar", "+ Add Env Var")}</Button>
+                {t("dockerManager.addEnvVar", "+ Add Env Var")}
+              </Button>
             </Box>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button
-            onClick={() => setRunDialog(false)}
+            onClick={() => {
+              setRunDialog(false);
+              setRunError(null);
+            }}
             disabled={actionLoading === "running"}
           >
-            {t("dockerManager.cancel", "Cancel")}</Button>
+            {t("dockerManager.cancel", "Cancel")}
+          </Button>
           <Button
             variant="contained"
             color="primary"
@@ -1277,7 +1744,8 @@ const DockerManager: React.FC = () => {
               )
             }
           >
-            {t("dockerManager.run", "Run")}</Button>
+            {t("dockerManager.run", "Run")}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -508,48 +508,141 @@ const Servers: React.FC = () => {
             items={filteredServers.map((s) => s._id)}
             strategy={rectSortingStrategy}
           >
-            <Grid container spacing={2.5}>
+            <Grid container spacing={3}>
               {filteredServers.map((server) => (
                 <SortableServerGridItem key={server._id} id={server._id}>
                   <Card
                     sx={{
                       height: "100%",
-                      transition: "all 0.25s ease",
+                      display: "flex",
+                      flexDirection: "column",
+                      transition:
+                        "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+                      background: (theme: any) =>
+                        theme.palette.mode === "dark"
+                          ? "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)"
+                          : "linear-gradient(145deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%)",
+                      backdropFilter: "blur(20px)",
+                      border: "1px solid",
+                      borderColor: (theme: any) =>
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.05)"
+                          : "rgba(0,0,0,0.05)",
+                      borderRadius: 4,
                       "&:hover": {
-                        transform: "translateY(-4px)",
-                        boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+                        transform: "translateY(-6px) scale(1.02)",
+                        boxShadow: (theme: any) =>
+                          theme.palette.mode === "dark"
+                            ? `0 20px 40px -10px rgba(0,0,0,0.5), 0 0 20px -5px rgba(255,255,255,0.05)`
+                            : "0 20px 40px -12px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)",
+                        borderColor: (theme: any) =>
+                          theme.palette.mode === "dark"
+                            ? "rgba(255,255,255,0.1)"
+                            : "rgba(0,0,0,0.1)",
                       },
                     }}
                   >
-                    <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                    <CardContent
+                      sx={{
+                        p: { xs: 2.5, md: 3 },
+                        flexGrow: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                      }}
+                    >
                       <Box
                         sx={{
                           display: "flex",
-                          alignItems: "center",
+                          alignItems: "flex-start",
                           justifyContent: "space-between",
-                          mb: 1,
+                          mb: 2,
                         }}
                       >
                         <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1.5,
+                          }}
                         >
-                          <DnsIcon sx={{ color: "primary.main" }} />
-                          <Typography
-                            variant="subtitle1"
-                            fontWeight={600}
+                          <Box
                             sx={{
-                              cursor: "pointer",
-                              "&:hover": {
-                                color: "primary.light",
-                                textDecoration: "underline",
-                              },
-                              transition: "color 0.2s",
+                              width: 40,
+                              height: 40,
+                              borderRadius: 2,
+                              bgcolor: (theme: any) =>
+                                theme.palette.mode === "dark"
+                                  ? "rgba(255,255,255,0.05)"
+                                  : "rgba(0,0,0,0.04)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "1px solid",
+                              borderColor: (theme: any) =>
+                                theme.palette.mode === "dark"
+                                  ? "rgba(255,255,255,0.08)"
+                                  : "rgba(0,0,0,0.08)",
                             }}
-                            onClick={() => navigate(`/servers/${server._id}`)}
                           >
-                            {server.name}
-                          </Typography>
+                            <DnsIcon sx={{ color: "primary.main" }} />
+                          </Box>
+                          <Box>
+                            <Typography
+                              variant="subtitle1"
+                              fontWeight={700}
+                              sx={{
+                                cursor: "pointer",
+                                "&:hover": {
+                                  color: "primary.main",
+                                },
+                                transition: "color 0.2s",
+                                lineHeight: 1.2,
+                              }}
+                              onClick={() => navigate(`/servers/${server._id}`)}
+                            >
+                              {server.name}
+                            </Typography>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.5,
+                                mt: 0.5,
+                              }}
+                            >
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  color: "text.secondary",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {server.username}@{server.host}:{server.port}
+                              </Typography>
+                              <Tooltip title="Copy Connection String">
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(
+                                      `${server.username}@${server.host}`,
+                                    );
+                                    toast.success("Copied!");
+                                  }}
+                                  sx={{
+                                    p: 0.5,
+                                    opacity: 0.6,
+                                    "&:hover": { opacity: 1 },
+                                  }}
+                                >
+                                  <ContentCopyIcon sx={{ fontSize: 13 }} />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          </Box>
                         </Box>
+
                         <Chip
                           label={server.status}
                           size="small"
@@ -560,41 +653,28 @@ const Servers: React.FC = () => {
                                 ? "error"
                                 : "default"
                           }
-                          variant="outlined"
-                        />
-                      </Box>
-
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 0.5,
-                          mb: 1,
-                        }}
-                      >
-                        <Typography
-                          variant="body2"
                           sx={{
-                            fontFamily: "'JetBrains Mono', monospace",
-                            color: "text.secondary",
+                            fontWeight: 600,
+                            borderRadius: 1.5,
+                            height: 24,
+                            px: 1,
+                            fontSize: 11,
+                            textTransform: "capitalize",
+                            bgcolor:
+                              server.status === "online"
+                                ? "rgba(16, 185, 129, 0.1)"
+                                : server.status === "offline"
+                                  ? "rgba(239, 68, 68, 0.1)"
+                                  : "rgba(150, 150, 150, 0.1)",
+                            color:
+                              server.status === "online"
+                                ? "#10b981"
+                                : server.status === "offline"
+                                  ? "#ef4444"
+                                  : "text.secondary",
+                            border: "none",
                           }}
-                        >
-                          {server.username}@{server.host}:{server.port}
-                        </Typography>
-                        <Tooltip title="Copy">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigator.clipboard.writeText(
-                                `${server.username}@${server.host}`,
-                              );
-                              toast.success("Copied!");
-                            }}
-                          >
-                            <ContentCopyIcon sx={{ fontSize: 14 }} />
-                          </IconButton>
-                        </Tooltip>
+                        />
                       </Box>
 
                       {server.lastCheckedAt && (
@@ -602,7 +682,7 @@ const Servers: React.FC = () => {
                           variant="caption"
                           color="text.secondary"
                           display="block"
-                          sx={{ mb: 2 }}
+                          sx={{ mb: 2.5, fontStyle: "italic", opacity: 0.8 }}
                         >
                           {t("serverDetail.lastChecked")}:{" "}
                           {new Date(server.lastCheckedAt).toLocaleString(
@@ -611,30 +691,47 @@ const Servers: React.FC = () => {
                         </Typography>
                       )}
 
+                      <Box sx={{ flexGrow: 1 }} />
+
                       {/* Action buttons */}
-                      <Box sx={{ display: "flex", gap: 1, mb: 1 }}>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          color="success"
-                          startIcon={
-                            testing === server._id ? (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 1,
+                          alignItems: "center",
+                          pt: 2,
+                          borderTop: "1px dashed",
+                          borderColor: (theme: any) =>
+                            theme.palette.mode === "dark"
+                              ? "rgba(255,255,255,0.1)"
+                              : "rgba(0,0,0,0.1)",
+                        }}
+                      >
+                        <Tooltip title={t("servers.testConnection")}>
+                          <IconButton
+                            size="small"
+                            color="success"
+                            onClick={() => handleTest(server._id)}
+                            disabled={testing === server._id}
+                            sx={{
+                              bgcolor: "rgba(16, 185, 129, 0.1)",
+                              "&:hover": { bgcolor: "rgba(16, 185, 129, 0.2)" },
+                            }}
+                          >
+                            {testing === server._id ? (
                               <CircularProgress size={16} color="inherit" />
                             ) : (
-                              <PowerIcon />
-                            )
-                          }
-                          onClick={() => handleTest(server._id)}
-                          disabled={testing === server._id}
-                        >
-                          {t("servers.testConnection")}
-                        </Button>
+                              <PowerIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        </Tooltip>
+
                         <Button
                           size="small"
-                          variant="outlined"
-                          startIcon={
+                          variant="text"
+                          endIcon={
                             statsLoading[server._id] ? (
-                              <CircularProgress size={16} color="inherit" />
+                              <CircularProgress size={14} color="inherit" />
                             ) : expandedStats[server._id] ? (
                               <ExpandLessIcon />
                             ) : (
@@ -646,30 +743,58 @@ const Servers: React.FC = () => {
                             statsLoading[server._id] ||
                             server.status === "offline"
                           }
+                          sx={{ textTransform: "none", fontWeight: 600 }}
                         >
                           {t("servers.stats")}
                         </Button>
                         <Box sx={{ flex: 1 }} />
-                        <IconButton
-                          size="small"
-                          color="info"
-                          onClick={() => navigate(`/servers/${server._id}`)}
-                        >
-                          <TerminalIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => openEdit(server)}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => setConfirmDelete(server)}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+
+                        <Tooltip title="Terminal">
+                          <IconButton
+                            size="small"
+                            color="info"
+                            onClick={() => navigate(`/servers/${server._id}`)}
+                            sx={{
+                              bgcolor: "rgba(14, 165, 233, 0.1)",
+                              "&:hover": { bgcolor: "rgba(14, 165, 233, 0.2)" },
+                            }}
+                          >
+                            <TerminalIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit">
+                          <IconButton
+                            size="small"
+                            onClick={() => openEdit(server)}
+                            sx={{
+                              bgcolor: (theme: any) =>
+                                theme.palette.mode === "dark"
+                                  ? "rgba(255,255,255,0.05)"
+                                  : "rgba(0,0,0,0.05)",
+                              "&:hover": {
+                                bgcolor: (theme: any) =>
+                                  theme.palette.mode === "dark"
+                                    ? "rgba(255,255,255,0.1)"
+                                    : "rgba(0,0,0,0.1)",
+                              },
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => setConfirmDelete(server)}
+                            sx={{
+                              bgcolor: "rgba(239, 68, 68, 0.1)",
+                              "&:hover": { bgcolor: "rgba(239, 68, 68, 0.2)" },
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title="Drag to reorder">
                           <IconButton
                             size="small"
@@ -677,6 +802,7 @@ const Servers: React.FC = () => {
                             sx={{
                               cursor: "grab",
                               "&:active": { cursor: "grabbing" },
+                              opacity: 0.5,
                             }}
                           >
                             <DragHandleIcon fontSize="small" />
@@ -689,28 +815,40 @@ const Servers: React.FC = () => {
                         {statsMap[server._id] && (
                           <Box
                             sx={{
-                              mt: 2,
+                              mt: 2.5,
                               p: 2,
-                              bgcolor: "rgba(0,0,0,0.2)",
+                              bgcolor: (theme: any) =>
+                                theme.palette.mode === "dark"
+                                  ? "rgba(0,0,0,0.2)"
+                                  : "rgba(0,0,0,0.03)",
                               borderRadius: 2,
-                              border: "1px solid rgba(255,255,255,0.06)",
+                              border: "1px solid",
+                              borderColor: (theme: any) =>
+                                theme.palette.mode === "dark"
+                                  ? "rgba(255,255,255,0.05)"
+                                  : "rgba(0,0,0,0.05)",
                             }}
                           >
                             {/* CPU */}
-                            <Box sx={{ mb: 1.5 }}>
+                            <Box sx={{ mb: 2 }}>
                               <Box
                                 sx={{
                                   display: "flex",
                                   justifyContent: "space-between",
-                                  mb: 0.5,
+                                  mb: 0.75,
                                 }}
                               >
-                                <Typography variant="caption" fontWeight={600}>
+                                <Typography
+                                  variant="caption"
+                                  fontWeight={600}
+                                  color="text.secondary"
+                                >
                                   CPU
                                 </Typography>
                                 <Typography
                                   variant="caption"
-                                  color="text.secondary"
+                                  fontWeight={600}
+                                  fontFamily="'JetBrains Mono', monospace"
                                 >
                                   {statsMap[server._id]?.cpu || "0%"}
                                 </Typography>
@@ -721,8 +859,12 @@ const Servers: React.FC = () => {
                                 sx={{
                                   height: 6,
                                   borderRadius: 3,
-                                  bgcolor: "rgba(255,255,255,0.05)",
+                                  bgcolor: (theme: any) =>
+                                    theme.palette.mode === "dark"
+                                      ? "rgba(255,255,255,0.05)"
+                                      : "rgba(0,0,0,0.05)",
                                   "& .MuiLinearProgress-bar": {
+                                    borderRadius: 3,
                                     bgcolor:
                                       parsePercent(statsMap[server._id]?.cpu) >
                                       80
@@ -733,20 +875,25 @@ const Servers: React.FC = () => {
                               />
                             </Box>
                             {/* RAM */}
-                            <Box sx={{ mb: 1.5 }}>
+                            <Box sx={{ mb: 2 }}>
                               <Box
                                 sx={{
                                   display: "flex",
                                   justifyContent: "space-between",
-                                  mb: 0.5,
+                                  mb: 0.75,
                                 }}
                               >
-                                <Typography variant="caption" fontWeight={600}>
+                                <Typography
+                                  variant="caption"
+                                  fontWeight={600}
+                                  color="text.secondary"
+                                >
                                   RAM
                                 </Typography>
                                 <Typography
                                   variant="caption"
-                                  color="text.secondary"
+                                  fontWeight={600}
+                                  fontFamily="'JetBrains Mono', monospace"
                                 >
                                   {statsMap[server._id]?.memory?.used || "?"} /{" "}
                                   {statsMap[server._id]?.memory?.total || "?"} (
@@ -763,33 +910,42 @@ const Servers: React.FC = () => {
                                 sx={{
                                   height: 6,
                                   borderRadius: 3,
-                                  bgcolor: "rgba(255,255,255,0.05)",
+                                  bgcolor: (theme: any) =>
+                                    theme.palette.mode === "dark"
+                                      ? "rgba(255,255,255,0.05)"
+                                      : "rgba(0,0,0,0.05)",
                                   "& .MuiLinearProgress-bar": {
+                                    borderRadius: 3,
                                     bgcolor:
                                       parsePercent(
                                         statsMap[server._id]?.memory?.percent,
                                       ) > 85
                                         ? "error.main"
-                                        : "success.main",
+                                        : "secondary.main",
                                   },
                                 }}
                               />
                             </Box>
                             {/* Disk */}
-                            <Box sx={{ mb: 1.5 }}>
+                            <Box sx={{ mb: 2 }}>
                               <Box
                                 sx={{
                                   display: "flex",
                                   justifyContent: "space-between",
-                                  mb: 0.5,
+                                  mb: 0.75,
                                 }}
                               >
-                                <Typography variant="caption" fontWeight={600}>
+                                <Typography
+                                  variant="caption"
+                                  fontWeight={600}
+                                  color="text.secondary"
+                                >
                                   Disk
                                 </Typography>
                                 <Typography
                                   variant="caption"
-                                  color="text.secondary"
+                                  fontWeight={600}
+                                  fontFamily="'JetBrains Mono', monospace"
                                 >
                                   {statsMap[server._id]?.disk?.used || "?"} /{" "}
                                   {statsMap[server._id]?.disk?.total || "?"} (
@@ -804,8 +960,12 @@ const Servers: React.FC = () => {
                                 sx={{
                                   height: 6,
                                   borderRadius: 3,
-                                  bgcolor: "rgba(255,255,255,0.05)",
+                                  bgcolor: (theme: any) =>
+                                    theme.palette.mode === "dark"
+                                      ? "rgba(255,255,255,0.05)"
+                                      : "rgba(0,0,0,0.05)",
                                   "& .MuiLinearProgress-bar": {
+                                    borderRadius: 3,
                                     bgcolor: "warning.main",
                                   },
                                 }}
@@ -816,17 +976,21 @@ const Servers: React.FC = () => {
                               sx={{
                                 display: "flex",
                                 justifyContent: "space-between",
+                                pt: 1.5,
+                                borderTop: "1px dashed rgba(150,150,150,0.2)",
                               }}
                             >
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
+                                fontWeight={500}
                               >
                                 ⏱ {statsMap[server._id]?.uptime || "?"}
                               </Typography>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
+                                fontWeight={500}
                               >
                                 Load: {statsMap[server._id]?.loadAvg || "?"}
                               </Typography>

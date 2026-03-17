@@ -77,6 +77,24 @@ const formatBytes = (bytes: number): string => {
   return `${gb.toFixed(1)} GB`;
 };
 
+export const glassCardStyle = {
+  background: (theme: any) =>
+    theme.palette.mode === "dark"
+      ? "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)"
+      : "linear-gradient(145deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 100%)",
+  backdropFilter: "blur(20px)",
+  border: "1px solid",
+  borderColor: (theme: any) =>
+    theme.palette.mode === "dark"
+      ? "rgba(255,255,255,0.05)"
+      : "rgba(0,0,0,0.05)",
+  borderRadius: 4,
+  boxShadow: (theme: any) =>
+    theme.palette.mode === "dark"
+      ? "0 4px 20px rgba(0,0,0,0.2)"
+      : "0 4px 20px rgba(0,0,0,0.02)",
+};
+
 const Settings: React.FC = () => {
   const { user, fetchUser, oauthLogin } = useAuth();
   const { t } = useTranslation();
@@ -412,7 +430,10 @@ const Settings: React.FC = () => {
         }}
       >
         {[0, 1, 2, 3].map((i) => (
-          <Card key={i} sx={{ height: "100%" }}>
+          <Card
+            key={i}
+            sx={{ ...glassCardStyle, height: "100%", boxShadow: "none" }}
+          >
             <CardContent sx={{ p: 3 }}>
               <Skeleton variant="text" width={180} height={28} sx={{ mb: 2 }} />
               <Skeleton
@@ -445,7 +466,7 @@ const Settings: React.FC = () => {
       />
 
       {/* Appearance */}
-      <Card sx={{ height: "100%" }}>
+      <Card sx={{ ...glassCardStyle, height: "100%" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box sx={sectionStyle}>
             <PaletteIcon sx={{ color: "primary.main" }} />
@@ -542,7 +563,7 @@ const Settings: React.FC = () => {
       </Card>
 
       {/* Profile */}
-      <Card sx={{ height: "100%" }}>
+      <Card sx={{ ...glassCardStyle, height: "100%" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box sx={sectionStyle}>
             <PersonIcon sx={{ color: "primary.main" }} />
@@ -584,7 +605,7 @@ const Settings: React.FC = () => {
       <TeamSettingsCard />
 
       {/* Multi-channel Alerts (Premium) */}
-      <Card sx={{ height: "100%" }}>
+      <Card sx={{ ...glassCardStyle, height: "100%" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box
             sx={{
@@ -667,7 +688,7 @@ const Settings: React.FC = () => {
       </Card>
 
       {/* GitHub Integration */}
-      <Card sx={{ height: "100%" }}>
+      <Card sx={{ ...glassCardStyle, height: "100%" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box sx={sectionStyle}>
             <img
@@ -739,7 +760,7 @@ const Settings: React.FC = () => {
       </Card>
 
       {/* Change Password */}
-      <Card sx={{ mb: 3 }}>
+      <Card sx={{ ...glassCardStyle, mb: 3 }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box sx={sectionStyle}>
             <LockIcon sx={{ color: "primary.main" }} />
@@ -791,7 +812,7 @@ const Settings: React.FC = () => {
       </Card>
 
       {/* Two-Factor Authentication */}
-      <Card sx={{ height: "100%" }}>
+      <Card sx={{ ...glassCardStyle, height: "100%" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box
             sx={{
@@ -977,7 +998,7 @@ const Settings: React.FC = () => {
       </Card>
 
       {/* Notifications Configuration */}
-      <Card sx={{ height: "100%" }}>
+      <Card sx={{ ...glassCardStyle, height: "100%" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box sx={sectionStyle}>
             <NotificationsIcon sx={{ color: "primary.main" }} />
@@ -1245,7 +1266,7 @@ const Settings: React.FC = () => {
       </Card>
 
       {/* Git Polling */}
-      <Card sx={{ height: "100%", mb: 3 }}>
+      <Card sx={{ ...glassCardStyle, height: "100%", mb: 3 }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box sx={sectionStyle}>
             <TuneIcon sx={{ color: "primary.main" }} />
@@ -1282,7 +1303,7 @@ const Settings: React.FC = () => {
       </Card>
 
       {/* Webhook Info */}
-      <Card sx={{ height: "100%" }}>
+      <Card sx={{ ...glassCardStyle, height: "100%" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box sx={sectionStyle}>
             <WebhookIcon sx={{ color: "primary.main" }} />
@@ -1318,7 +1339,7 @@ const Settings: React.FC = () => {
       </Card>
 
       {/* Default Commands */}
-      <Card sx={{ height: "100%" }}>
+      <Card sx={{ ...glassCardStyle, height: "100%" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box sx={sectionStyle}>
             <TerminalIcon sx={{ color: "primary.main" }} />
@@ -1372,7 +1393,7 @@ const Settings: React.FC = () => {
       </Card>
 
       {/* S3 Storage Settings */}
-      <Card sx={{ height: "100%" }}>
+      <Card sx={{ ...glassCardStyle, height: "100%" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box sx={sectionStyle}>
             <SecurityIcon sx={{ color: "primary.main" }} />
@@ -1453,7 +1474,7 @@ const Settings: React.FC = () => {
       <Divider sx={{ gridColumn: { lg: "span 2" }, my: 1 }} />
 
       {/* System Info */}
-      <Card sx={{ height: "100%" }}>
+      <Card sx={{ ...glassCardStyle, height: "100%" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box sx={sectionStyle}>
             <InfoIcon sx={{ color: "primary.main" }} />
@@ -1569,9 +1590,13 @@ const Settings: React.FC = () => {
       {/* Danger Zone */}
       <Card
         sx={{
+          ...glassCardStyle,
           height: "100%",
-          border: "1px solid",
           borderColor: "error.dark",
+          boxShadow: (theme: any) =>
+            theme.palette.mode === "dark"
+              ? "0 4px 20px rgba(239, 68, 68, 0.15)"
+              : "0 4px 20px rgba(239, 68, 68, 0.05)",
         }}
       >
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>

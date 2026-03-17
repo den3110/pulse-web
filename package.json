@@ -22,9 +22,11 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "axios": "^1.7.9",
     "dayjs": "^1.11.19",
+    "fflate": "^0.8.2",
     "highcharts": "^12.5.0",
     "highcharts-react-official": "^3.2.3",
     "i18next": "^25.8.7",
+    "js-yaml": "^4.1.1",
     "prettier": "^3.8.1",
     "prettier-plugin-nginx": "^1.0.3",
     "react": "^19.0.0",
@@ -44,6 +46,7 @@
     "xterm-addon-fit": "^0.8.0"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",

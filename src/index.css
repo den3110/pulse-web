@@ -1,6 +1,10 @@
-/* Minimal global styles - MUI handles most styling */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+/* ═══════════════════════════════════════════════════
+   Global Styles — Premium Design System
+   ═══════════════════════════════════════════════════ */
 
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+/* ── Reset ── */
 *,
 *::before,
 *::after {
@@ -19,16 +23,158 @@ body {
   overflow-x: hidden;
 }
 
-/* Event Stream Log Viewer */
+/* ── Selection ── */
+::selection {
+  background: var(--primary-main-30, rgba(249, 115, 22, 0.3));
+  color: inherit;
+}
+
+/* ── Focus visible (keyboard) ── */
+*:focus-visible {
+  outline: 2px solid var(--primary-main, #f97316);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ═══════════════════════════════════════════════════
+   Animations
+   ═══════════════════════════════════════════════════ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 4px var(--primary-main-20, rgba(249, 115, 22, 0.2));
+  }
+  50% {
+    box-shadow: 0 0 16px var(--primary-main-30, rgba(249, 115, 22, 0.3));
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   Scrollbar
+   ═══════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(127, 127, 127, 0.25);
+  border-radius: 100px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(127, 127, 127, 0.45);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(127, 127, 127, 0.25) transparent;
+}
+
+/* ═══════════════════════════════════════════════════
+   Terminal / Log Viewer
+   ═══════════════════════════════════════════════════ */
+
 .terminal-body {
   font-family: "JetBrains Mono", monospace;
   font-size: 12px;
-  line-height: 1.6;
+  line-height: 1.7;
   padding: 0 16px 16px;
   max-height: 500px;
   overflow-y: auto;
-  background: var(--terminal-bg, #0d1117);
-  color: var(--terminal-text, #e6edf3);
+  background: var(--terminal-bg, #0a0d14);
+  color: var(--terminal-text, #e2e8f0);
   position: relative;
 }
 
@@ -47,21 +193,24 @@ body {
 }
 
 .terminal-body::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .terminal-body::-webkit-scrollbar-thumb {
-  background: var(--terminal-text);
-  opacity: 0.2;
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 100px;
 }
 
-/* Individual event entry */
+.terminal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Log lines ── */
 .log-line {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 4px 0;
+  padding: 3px 0;
   word-break: break-all;
   white-space: pre-wrap;
   position: relative;
@@ -82,10 +231,10 @@ body {
 /* Timeline dot */
 .log-line::before {
   content: "";
-  min-width: 8px;
-  height: 8px;
+  min-width: 7px;
+  height: 7px;
   border-radius: 50%;
-  margin-top: 6px;
+  margin-top: 7px;
   flex-shrink: 0;
   border: 1.5px solid transparent;
 }
@@ -94,37 +243,34 @@ body {
 .log-line::after {
   content: "";
   position: absolute;
-  left: 3.5px;
+  left: 3px;
   top: 18px;
   width: 1px;
   height: calc(100% - 6px);
   background: var(--terminal-text);
-  opacity: 0.1;
+  opacity: 0.06;
 }
 
 .log-line:last-child::after {
   display: none;
 }
 
-/* Event type colors */
+/* Event type dot colors */
 .log-line.info::before {
   background: #3b82f6;
-  border-color: rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.25);
 }
-
 .log-line.success::before {
   background: #10b981;
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.25);
 }
-
 .log-line.warning::before {
   background: #f59e0b;
-  border-color: rgba(245, 158, 11, 0.3);
+  border-color: rgba(245, 158, 11, 0.25);
 }
-
 .log-line.error::before {
   background: #ef4444;
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.25);
 }
 
 /* Text colors per type */
@@ -132,32 +278,32 @@ body {
   color: var(--terminal-text);
 }
 .log-line.success {
-  color: #10b981;
+  color: #34d399;
 }
 .log-line.warning {
-  color: #f59e0b;
+  color: #fbbf24;
 }
 .log-line.error {
-  color: #ef4444;
+  color: #f87171;
 }
 
-/* Step headers (lines with emoji indicators) */
+/* Step headers */
 .log-line.step-header {
-  padding: 8px 10px;
+  padding: 8px 12px;
   margin: 8px 0 2px;
-  background: var(--primary-main-08);
-  border-radius: 6px;
-  border-left: 2px solid var(--primary-main);
+  background: var(--primary-main-08, rgba(249, 115, 22, 0.08));
+  border-radius: 8px;
+  border-left: 2.5px solid var(--primary-main, #f97316);
   font-weight: 500;
   color: #e2e8f0;
 }
 
 .log-line.step-header::before {
-  background: var(--primary-main);
-  border-color: var(--primary-main-40);
-  min-width: 10px;
-  height: 10px;
-  margin-top: 4px;
+  background: var(--primary-main, #f97316);
+  border-color: var(--primary-main-40, rgba(249, 115, 22, 0.4));
+  min-width: 9px;
+  height: 9px;
+  margin-top: 5px;
 }
 
 .log-line.step-header::after {
@@ -166,46 +312,16 @@ body {
 
 /* Timestamp */
 .log-time {
-  color: #4b5563;
+  color: #475569;
   font-size: 10px;
   min-width: 60px;
   flex-shrink: 0;
   margin-top: 1px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Log content */
 .log-content {
   flex: 1;
   min-width: 0;
-}
-
-@keyframes pulse-dot {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.4;
-    transform: scale(0.8);
-  }
-}
-
-/* Scrollbar global */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(127, 127, 127, 0.4);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(127, 127, 127, 0.6);
 }

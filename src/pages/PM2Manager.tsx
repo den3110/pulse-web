@@ -34,6 +34,8 @@ import {
   FormControlLabel,
   useMediaQuery,
   useTheme,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import { useServer } from "../contexts/ServerContext";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -51,6 +53,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile"; // Imported Icon
+import FolderIcon from "@mui/icons-material/Folder";
 import ServerFileSelectorDialog from "../components/ServerFileSelectorDialog"; // Imported Component
 
 interface PM2Process {
@@ -125,12 +128,24 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
   const [processes, setProcesses] = useState<PM2Process[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [isInstalled, setIsInstalled] = useState<boolean | null>(null);
+  const [installing, setInstalling] = useState(false);
+  const [installLogsOpen, setInstallLogsOpen] = useState(false);
+  const [installLogsContent, setInstallLogsContent] = useState("");
+
+  // Uninstall state
+  const [uninstallOpen, setUninstallOpen] = useState(false);
+  const [uninstalling, setUninstalling] = useState(false);
+  const [uninstallPassword, setUninstallPassword] = useState("");
 
   // Start dialog
   const [startOpen, setStartOpen] = useState(false);
-  const [fileSelectorOpen, setFileSelectorOpen] = useState(false); // Added State
+  const [fileSelectorOpen, setFileSelectorOpen] = useState(false);
+  const [folderSelectorOpen, setFolderSelectorOpen] = useState(false);
   const [startForm, setStartForm] = useState({
+    runMode: "script" as "script" | "command",
     script: "",
+    command: "",
     name: "",
     interpreter: "node",
     instances: 1,
@@ -163,8 +178,17 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
       if (!selectedServer?._id) return;
       if (showSpinner) setLoading(true);
       try {
-        const { data } = await api.get(`/pm2/${selectedServer?._id}/processes`);
-        setProcesses(data);
+        const checkRes = await api.get(`/pm2/${selectedServer._id}/check`);
+        setIsInstalled(checkRes.data.installed);
+
+        if (checkRes.data.installed) {
+          const { data } = await api.get(
+            `/pm2/${selectedServer._id}/processes`,
+          );
+          setProcesses(data);
+        } else {
+          setProcesses([]);
+        }
       } catch (err: any) {
         // Only toast on manual / first fetch, not background refresh
         if (showSpinner) {
@@ -178,6 +202,68 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
     },
     [selectedServer?._id],
   );
+
+  const handleInstallPm2 = () => {
+    if (!selectedServer?._id) return;
+
+    setInstalling(true);
+    setInstallLogsContent("");
+    setInstallLogsOpen(true);
+
+    const token = localStorage.getItem("accessToken");
+    const API_URL = import.meta.env.VITE_API_URL || "";
+    // Connect to the stream
+    const url = `${API_URL}/api/pm2/${selectedServer._id}/install/stream?token=${token}`;
+
+    const es = new EventSource(url);
+
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.log) {
+          setInstallLogsContent((prev) => prev + data.log + "\n");
+        }
+        if (data.done) {
+          es.close();
+          setInstalling(false);
+          // If successful, wait 2 sec before auto-closing and refreshing
+          if (data.type !== "error") {
+            setTimeout(() => {
+              setInstallLogsOpen(false);
+              fetchProcesses(true);
+            }, 2000);
+          }
+        }
+      } catch (e) {}
+    };
+
+    es.onerror = () => {
+      setInstallLogsContent(
+        (prev) => prev + "\n[EventSource Error] Connection lost.",
+      );
+      es.close();
+      setInstalling(false);
+    };
+  };
+
+  const handleUninstallPm2 = async () => {
+    if (!selectedServer?._id) return;
+    try {
+      setUninstalling(true);
+      await api.post(`/pm2/${selectedServer._id}/uninstall`, {
+        hasProcesses: processes.length > 0,
+        password: uninstallPassword,
+      });
+      toast.success("PM2 uninstalled successfully");
+      setUninstallOpen(false);
+      setUninstallPassword("");
+      fetchProcesses(true);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to uninstall PM2");
+    } finally {
+      setUninstalling(false);
+    }
+  };
 
   useEffect(() => {
     fetchProcesses(true);
@@ -273,16 +359,29 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
   );
 
   const handleStart = useCallback(async () => {
-    if (!startForm.script.trim()) {
+    const isCommand = startForm.runMode === "command";
+
+    if (isCommand && !startForm.command.trim()) {
+      toast.error("Command is required");
+      return;
+    }
+    if (!isCommand && !startForm.script.trim()) {
       toast.error("Script path is required");
       return;
     }
+
     setStartLoading(true);
     try {
+      // For command mode, use the command as the script and undefined for interpreter
+      const targetScript = isCommand ? startForm.command : startForm.script;
+      const targetInterpreter = isCommand
+        ? "none"
+        : startForm.interpreter || undefined;
+
       const { data } = await api.post(`/pm2/${selectedServer?._id}/start`, {
-        script: startForm.script,
+        script: targetScript,
         name: startForm.name || undefined,
-        interpreter: startForm.interpreter || undefined,
+        interpreter: targetInterpreter,
         instances: startForm.instances > 1 ? startForm.instances : undefined,
         cwd: startForm.cwd || undefined,
         args: startForm.args || undefined,
@@ -293,7 +392,9 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
         toast.success("Process started!");
         setStartOpen(false);
         setStartForm({
+          runMode: "script",
           script: "",
+          command: "",
           name: "",
           interpreter: "node",
           instances: 1,
@@ -449,7 +550,11 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
               size="small"
               startIcon={<SaveIcon />}
               onClick={() => handleBulkAction("save")}
-              disabled={!selectedServer?._id || actionLoading === "save"}
+              disabled={
+                !selectedServer?._id ||
+                actionLoading === "save" ||
+                isInstalled === false
+              }
             >
               {t("pm2.save")}
             </Button>
@@ -459,16 +564,33 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
               color="warning"
               startIcon={<RestartAltIcon />}
               onClick={() => handleBulkAction("restart-all")}
-              disabled={!selectedServer?._id || actionLoading === "restart-all"}
+              disabled={
+                !selectedServer?._id ||
+                actionLoading === "restart-all" ||
+                isInstalled === false
+              }
             >
               {t("pm2.restartAll")}
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              startIcon={<DeleteIcon />}
+              onClick={() => {
+                setUninstallPassword("");
+                setUninstallOpen(true);
+              }}
+              disabled={!selectedServer?._id || isInstalled === false}
+            >
+              Uninstall PM2
             </Button>
             <Button
               variant="contained"
               size="small"
               startIcon={<AddIcon />}
               onClick={() => setStartOpen(true)}
-              disabled={!selectedServer?._id}
+              disabled={!selectedServer?._id || isInstalled === false}
             >
               {t("pm2.startNew")}
             </Button>
@@ -532,7 +654,11 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
                 size="small"
                 variant="text"
                 onClick={() => handleBulkAction("stop-all")}
-                disabled={!selectedServer?._id || actionLoading === "stop-all"}
+                disabled={
+                  !selectedServer?._id ||
+                  actionLoading === "stop-all" ||
+                  isInstalled === false
+                }
                 sx={{ fontSize: 12, textTransform: "none" }}
                 startIcon={<StopIcon sx={{ fontSize: 14 }} />}
               >
@@ -542,7 +668,11 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
                 size="small"
                 variant="text"
                 onClick={() => handleBulkAction("flush")}
-                disabled={!selectedServer?._id || actionLoading === "flush"}
+                disabled={
+                  !selectedServer?._id ||
+                  actionLoading === "flush" ||
+                  isInstalled === false
+                }
                 sx={{ fontSize: 12, textTransform: "none" }}
                 startIcon={<CleaningServicesIcon sx={{ fontSize: 14 }} />}
               >
@@ -552,7 +682,11 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
                 size="small"
                 variant="text"
                 onClick={() => handleBulkAction("startup")}
-                disabled={!selectedServer?._id || actionLoading === "startup"}
+                disabled={
+                  !selectedServer?._id ||
+                  actionLoading === "startup" ||
+                  isInstalled === false
+                }
                 sx={{ fontSize: 12, textTransform: "none" }}
                 startIcon={<PowerSettingsNewIcon sx={{ fontSize: 14 }} />}
               >
@@ -627,6 +761,33 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
               <Typography variant="body1" color="text.secondary">
                 {t("pm2.selectServer")}
               </Typography>
+            </Box>
+          ) : isInstalled === false ? (
+            <Box sx={{ textAlign: "center", py: 6 }}>
+              <TerminalIcon
+                sx={{ fontSize: 48, color: "text.secondary", mb: 2 }}
+              />
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                PM2 is not installed
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                PM2 is required to manage Node.js processes on this server.
+                Click the button below to install it.
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={
+                  installing ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <PlayArrowIcon />
+                  )
+                }
+                onClick={handleInstallPm2}
+                disabled={installing}
+              >
+                {installing ? "Installing..." : "Install PM2"}
+              </Button>
             </Box>
           ) : processes.length === 0 ? (
             <Box sx={{ textAlign: "center", py: 6 }}>
@@ -911,35 +1072,69 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
             gap: 2,
           }}
         >
-          <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
-            <TextField
-              label={t("pm2.scriptPath")}
-              value={startForm.script}
-              onChange={(e) =>
-                setStartForm({ ...startForm, script: e.target.value })
-              }
-              size="small"
-              fullWidth
-              placeholder="Select a script..."
-              helperText="Path to the script file to run"
-              required
-              InputProps={{
-                readOnly: false, // Allow manual edit if needed, or keep true if strictly browse
-                endAdornment: (
-                  <IconButton
-                    size="small"
-                    onClick={() => setFileSelectorOpen(true)}
-                    edge="end"
-                  >
-                    <InsertDriveFileIcon />
-                  </IconButton>
-                ),
+          {/* Run Mode Toggle */}
+          <Box sx={{ display: "flex", justifyContent: "center", mb: 1 }}>
+            <ToggleButtonGroup
+              color="primary"
+              value={startForm.runMode}
+              exclusive
+              onChange={(_, val) => {
+                if (val) setStartForm({ ...startForm, runMode: val });
               }}
-            />
+              size="small"
+            >
+              <ToggleButton value="script" sx={{ px: 3 }}>
+                Script File
+              </ToggleButton>
+              <ToggleButton value="command" sx={{ px: 3 }}>
+                Custom Command
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+            {startForm.runMode === "script" ? (
+              <TextField
+                label={t("pm2.scriptPath", "Script Path *")}
+                value={startForm.script}
+                onChange={(e) =>
+                  setStartForm({ ...startForm, script: e.target.value })
+                }
+                size="small"
+                fullWidth
+                placeholder="/var/www/my-app/index.js"
+                helperText="Path to the script file to run"
+                required
+                InputProps={{
+                  endAdornment: (
+                    <IconButton
+                      size="small"
+                      onClick={() => setFileSelectorOpen(true)}
+                      edge="end"
+                    >
+                      <InsertDriveFileIcon />
+                    </IconButton>
+                  ),
+                }}
+              />
+            ) : (
+              <TextField
+                label="Command *"
+                value={startForm.command}
+                onChange={(e) =>
+                  setStartForm({ ...startForm, command: e.target.value })
+                }
+                size="small"
+                fullWidth
+                placeholder="npm run start"
+                helperText="Command to execute (e.g. npm start, yarn dev, pnpm serve)"
+                required
+              />
+            )}
           </Box>
 
           <TextField
-            label={t("pm2.processName")}
+            label={t("pm2.processName", "Process Name")}
             value={startForm.name}
             onChange={(e) =>
               setStartForm({ ...startForm, name: e.target.value })
@@ -949,23 +1144,26 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
             placeholder="e.g. my-api"
             helperText="Optional name for the process"
           />
+
           <Box sx={{ display: "flex", gap: 2 }}>
-            <FormControl size="small" sx={{ flex: 1 }}>
-              <InputLabel>Interpreter</InputLabel>
-              <Select
-                value={startForm.interpreter}
-                label="Interpreter"
-                onChange={(e) =>
-                  setStartForm({ ...startForm, interpreter: e.target.value })
-                }
-              >
-                <MenuItem value="node">Node.js</MenuItem>
-                <MenuItem value="python3">Python 3</MenuItem>
-                <MenuItem value="python">Python</MenuItem>
-                <MenuItem value="bash">Bash</MenuItem>
-                <MenuItem value="none">None (binary)</MenuItem>
-              </Select>
-            </FormControl>
+            {startForm.runMode === "script" && (
+              <FormControl size="small" sx={{ flex: 1 }}>
+                <InputLabel>Interpreter</InputLabel>
+                <Select
+                  value={startForm.interpreter}
+                  label="Interpreter"
+                  onChange={(e) =>
+                    setStartForm({ ...startForm, interpreter: e.target.value })
+                  }
+                >
+                  <MenuItem value="node">Node.js</MenuItem>
+                  <MenuItem value="python3">Python 3</MenuItem>
+                  <MenuItem value="python">Python</MenuItem>
+                  <MenuItem value="bash">Bash</MenuItem>
+                  <MenuItem value="none">None (binary)</MenuItem>
+                </Select>
+              </FormControl>
+            )}
             <TextField
               label="Instances"
               type="number"
@@ -977,7 +1175,7 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
                 })
               }
               size="small"
-              sx={{ width: 120 }}
+              sx={{ width: startForm.runMode === "script" ? 120 : "100%" }}
               inputProps={{ min: 1, max: 16 }}
               helperText="1=fork, >1=cluster"
             />
@@ -990,8 +1188,52 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
             }
             size="small"
             fullWidth
-            placeholder="/home/user/myapp"
+            placeholder="/var/www/my-app"
+            helperText="Directory where the process runs"
+            InputProps={{
+              endAdornment: (
+                <IconButton
+                  size="small"
+                  onClick={() => setFolderSelectorOpen(true)}
+                  edge="end"
+                >
+                  <FolderIcon />
+                </IconButton>
+              ),
+            }}
           />
+          {startForm.runMode === "command" && (
+            <Box>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ mb: 0.5, display: "block" }}
+              >
+                Quick commands:
+              </Typography>
+              <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                {[
+                  "npm start",
+                  "npm run dev",
+                  "npm run build",
+                  "yarn start",
+                  "yarn dev",
+                  "pnpm start",
+                  "python3 app.py",
+                ].map((cmd) => (
+                  <Chip
+                    key={cmd}
+                    label={cmd}
+                    size="small"
+                    variant={startForm.command === cmd ? "filled" : "outlined"}
+                    color={startForm.command === cmd ? "primary" : "default"}
+                    onClick={() => setStartForm({ ...startForm, command: cmd })}
+                    sx={{ cursor: "pointer", fontSize: "0.75rem" }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
           <TextField
             label="Arguments"
             value={startForm.args}
@@ -1002,17 +1244,24 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
             fullWidth
             placeholder="--port 3000 --env production"
           />
-          <TextField
-            label="Max Memory Restart"
-            value={startForm.maxMemory}
-            onChange={(e) =>
-              setStartForm({ ...startForm, maxMemory: e.target.value })
-            }
-            size="small"
-            fullWidth
-            placeholder="e.g. 300M, 1G"
-            helperText="Auto-restart when memory exceeds this limit"
-          />
+          <FormControl size="small" fullWidth>
+            <InputLabel>Max Memory Restart</InputLabel>
+            <Select
+              value={startForm.maxMemory}
+              label="Max Memory Restart"
+              onChange={(e) =>
+                setStartForm({ ...startForm, maxMemory: e.target.value })
+              }
+            >
+              <MenuItem value="">None (no limit)</MenuItem>
+              <MenuItem value="128M">128 MB</MenuItem>
+              <MenuItem value="256M">256 MB</MenuItem>
+              <MenuItem value="512M">512 MB</MenuItem>
+              <MenuItem value="1G">1 GB</MenuItem>
+              <MenuItem value="2G">2 GB</MenuItem>
+              <MenuItem value="4G">4 GB</MenuItem>
+            </Select>
+          </FormControl>
           <FormControlLabel
             control={
               <Switch
@@ -1039,7 +1288,12 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
               )
             }
             onClick={handleStart}
-            disabled={startLoading || !startForm.script.trim()}
+            disabled={
+              startLoading ||
+              (startForm.runMode === "script"
+                ? !startForm.script.trim()
+                : !startForm.command.trim())
+            }
           >
             {t("pm2.start")}
           </Button>
@@ -1074,6 +1328,7 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
         }}
         serverId={selectedServer?._id || ""}
         title="Select Script"
+        selectMode="file"
         allowedExtensions={[
           ".js",
           ".ts",
@@ -1083,6 +1338,17 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
           ".mjs",
           ".cjs",
         ]}
+      />
+
+      {/* Folder Selector Dialog */}
+      <ServerFileSelectorDialog
+        open={folderSelectorOpen}
+        onClose={() => setFolderSelectorOpen(false)}
+        onSelect={(folderPath) => {
+          setStartForm((prev) => ({ ...prev, cwd: folderPath }));
+        }}
+        serverId={selectedServer?._id || ""}
+        selectMode="directory"
       />
 
       {/* Delete Confirm Dialog */}
@@ -1198,6 +1464,124 @@ const PM2Manager: React.FC<{ hideHeader?: boolean }> = ({
             Copy
           </Button>
           <Button onClick={handleCloseLogs}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Installation Logs Dialog */}
+      <Dialog
+        open={installLogsOpen}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: { bgcolor: "background.paper", backgroundImage: "none" },
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          Installing PM2 on {selectedServer?.name}
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <Box
+            sx={{
+              p: 2,
+              bgcolor: "#000",
+              color: "#a8b2d1",
+              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+              fontSize: "0.85rem",
+              height: 400,
+              overflowY: "auto",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-all",
+            }}
+          >
+            {installLogsContent}
+          </Box>
+        </DialogContent>
+        <DialogActions
+          sx={{ p: 2, borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        >
+          {installing && <CircularProgress size={20} sx={{ mr: 2 }} />}
+          <Button
+            onClick={() => setInstallLogsOpen(false)}
+            disabled={installing}
+          >
+            {installing ? "Installing..." : "Close"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Uninstall Confirm Dialog */}
+      <Dialog
+        open={uninstallOpen}
+        onClose={() => !uninstalling && setUninstallOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { bgcolor: "background.paper", backgroundImage: "none" },
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          Uninstall PM2
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          {processes.length > 0 ? (
+            <Box sx={{ mt: 2 }}>
+              <Typography
+                variant="body1"
+                color="error"
+                gutterBottom
+                sx={{ fontWeight: 600 }}
+              >
+                Warning: You have {processes.length} active processes running!
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ mb: 2, color: "text.secondary" }}
+              >
+                Uninstalling PM2 will forcefully stop and delete all these
+                processes. This action cannot be undone. To proceed, please
+                confirm your account password.
+              </Typography>
+              <FormControl fullWidth margin="normal">
+                <TextField
+                  label="Account Password"
+                  type="password"
+                  value={uninstallPassword}
+                  onChange={(e) => setUninstallPassword(e.target.value)}
+                  disabled={uninstalling}
+                  size="small"
+                  autoFocus
+                />
+              </FormControl>
+            </Box>
+          ) : (
+            <Typography sx={{ mt: 2 }}>
+              Are you sure you want to uninstall PM2 from this server?
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions
+          sx={{ p: 2, borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        >
+          <Button
+            onClick={() => setUninstallOpen(false)}
+            disabled={uninstalling}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleUninstallPm2}
+            color="error"
+            variant="contained"
+            disabled={
+              uninstalling || (processes.length > 0 && !uninstallPassword)
+            }
+          >
+            {uninstalling ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              "Confirm Uninstall"
+            )}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

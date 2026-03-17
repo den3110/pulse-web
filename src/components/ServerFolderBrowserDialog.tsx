@@ -20,6 +20,7 @@ import FolderIcon from "@mui/icons-material/Folder";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckIcon from "@mui/icons-material/Check";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 import api from "../services/api";
 
 interface ServerFolderBrowserDialogProps {
@@ -29,6 +30,7 @@ interface ServerFolderBrowserDialogProps {
   serverId: string;
   initialPath?: string;
   title?: string;
+  showFiles?: boolean;
 }
 
 interface FileEntry {
@@ -44,13 +46,14 @@ const ServerFolderBrowserDialog: React.FC<ServerFolderBrowserDialogProps> = ({
   serverId,
   initialPath = "/",
   title = "Select Destination Folder",
+  showFiles = false,
 }) => {
-  const [folders, setFolders] = useState<FileEntry[]>([]);
+  const [entries, setEntries] = useState<FileEntry[]>([]);
   const [currentPath, setCurrentPath] = useState(initialPath);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const loadFolders = useCallback(
+  const loadEntries = useCallback(
     async (path: string) => {
       if (!open || !serverId) return;
 
@@ -58,44 +61,52 @@ const ServerFolderBrowserDialog: React.FC<ServerFolderBrowserDialogProps> = ({
       setError("");
       try {
         const { data } = await api.get(`/ftp/${serverId}/list`, {
-          params: { path, showHidden: false, type: "directory" },
+          params: {
+            path,
+            showHidden: false,
+            ...(showFiles ? {} : { type: "directory" }),
+          },
         });
 
-        // Filter only directories (backend should do this, but safe to keep)
-        const dirs = data.entries.filter(
-          (e: FileEntry) => e.type === "directory",
-        );
+        const items = showFiles
+          ? data.entries.filter(
+              (e: FileEntry) => e.type === "directory" || e.type === "file",
+            )
+          : data.entries.filter((e: FileEntry) => e.type === "directory");
 
-        // Sort: hidden first (if any), then alphabetical
-        dirs.sort((a: FileEntry, b: FileEntry) => a.name.localeCompare(b.name));
+        // Sort: directories first, then files, alphabetical within each
+        items.sort((a: FileEntry, b: FileEntry) => {
+          if (a.type === "directory" && b.type !== "directory") return -1;
+          if (a.type !== "directory" && b.type === "directory") return 1;
+          return a.name.localeCompare(b.name);
+        });
 
-        setFolders(dirs);
+        setEntries(items);
         setCurrentPath(data.path);
       } catch (err: any) {
         const msg =
           err.response?.data?.message ||
           err.message ||
-          "Failed to load folders";
+          "Failed to load entries";
         setError(msg);
-        setFolders([]);
+        setEntries([]);
       } finally {
         setLoading(false);
       }
     },
-    [serverId, open],
+    [serverId, open, showFiles],
   );
 
-  // Load initial path when dialog opens
   useEffect(() => {
     if (open && serverId) {
-      loadFolders(currentPath || "/");
+      loadEntries(currentPath || "/");
     }
-  }, [open, serverId, loadFolders]); // Removed currentPath from deps to avoid loop if loadFolders changes it slightly
+  }, [open, serverId, loadEntries]);
 
   const navigateInto = (folderName: string) => {
     const newPath =
       currentPath === "/" ? `/${folderName}` : `${currentPath}/${folderName}`;
-    loadFolders(newPath);
+    loadEntries(newPath);
   };
 
   const navigateUp = () => {
@@ -103,7 +114,14 @@ const ServerFolderBrowserDialog: React.FC<ServerFolderBrowserDialogProps> = ({
     const parts = currentPath.split("/").filter(Boolean);
     parts.pop();
     const parentPath = parts.length === 0 ? "/" : `/${parts.join("/")}`;
-    loadFolders(parentPath);
+    loadEntries(parentPath);
+  };
+
+  const selectFile = (fileName: string) => {
+    const fullPath =
+      currentPath === "/" ? `/${fileName}` : `${currentPath}/${fileName}`;
+    onSelect(fullPath);
+    onClose();
   };
 
   const selectCurrent = () => {
@@ -156,7 +174,7 @@ const ServerFolderBrowserDialog: React.FC<ServerFolderBrowserDialogProps> = ({
         </Typography>
         <IconButton
           size="small"
-          onClick={() => loadFolders(currentPath)}
+          onClick={() => loadEntries(currentPath)}
           disabled={loading}
         >
           <RefreshIcon fontSize="small" />
@@ -191,7 +209,7 @@ const ServerFolderBrowserDialog: React.FC<ServerFolderBrowserDialogProps> = ({
             size="small"
             variant={currentPath === "/" ? "filled" : "outlined"}
             color={currentPath === "/" ? "primary" : "default"}
-            onClick={() => loadFolders("/")}
+            onClick={() => loadEntries("/")}
             sx={{ cursor: "pointer", fontFamily: "monospace", fontWeight: 600 }}
           />
 
@@ -208,7 +226,7 @@ const ServerFolderBrowserDialog: React.FC<ServerFolderBrowserDialogProps> = ({
                   size="small"
                   variant={isLast ? "filled" : "outlined"}
                   color={isLast ? "primary" : "default"}
-                  onClick={() => !isLast && loadFolders(path)}
+                  onClick={() => !isLast && loadEntries(path)}
                   sx={{
                     cursor: isLast ? "default" : "pointer",
                     fontFamily: "monospace",
@@ -245,7 +263,7 @@ const ServerFolderBrowserDialog: React.FC<ServerFolderBrowserDialogProps> = ({
               </Box>
             ))}
           </Box>
-        ) : folders.length === 0 && !error ? (
+        ) : entries.length === 0 && !error ? (
           <Box
             sx={{
               py: 6,
@@ -259,15 +277,19 @@ const ServerFolderBrowserDialog: React.FC<ServerFolderBrowserDialogProps> = ({
               sx={{ fontSize: 48, color: "text.disabled", mb: 1, opacity: 0.5 }}
             />
             <Typography variant="body2" color="text.secondary">
-              No subfolders found
+              {showFiles ? "No items found" : "No subfolders found"}
             </Typography>
           </Box>
         ) : (
           <List dense sx={{ maxHeight: 350, overflow: "auto", mx: -1 }}>
-            {folders.map((folder) => (
+            {entries.map((entry) => (
               <ListItemButton
-                key={folder.name}
-                onClick={() => navigateInto(folder.name)}
+                key={entry.name}
+                onClick={() =>
+                  entry.type === "directory"
+                    ? navigateInto(entry.name)
+                    : selectFile(entry.name)
+                }
                 sx={{
                   borderRadius: 1.5,
                   mb: 0.5,
@@ -277,10 +299,16 @@ const ServerFolderBrowserDialog: React.FC<ServerFolderBrowserDialogProps> = ({
                 }}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>
-                  <FolderIcon sx={{ color: "#f59e0b", fontSize: 22 }} />
+                  {entry.type === "directory" ? (
+                    <FolderIcon sx={{ color: "#f59e0b", fontSize: 22 }} />
+                  ) : (
+                    <InsertDriveFileIcon
+                      sx={{ color: "#60a5fa", fontSize: 22 }}
+                    />
+                  )}
                 </ListItemIcon>
                 <ListItemText
-                  primary={folder.name}
+                  primary={entry.name}
                   primaryTypographyProps={{
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: "0.9rem",

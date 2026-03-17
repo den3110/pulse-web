@@ -252,6 +252,8 @@ const DeploymentDetail: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [project, setProject] = useState<any>(null);
+  const isLocalProject =
+    project?.sourceType === "local" || (!project?.repoUrl && project);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [deployStatus, setDeployStatus] = useState<string>("idle");
   const [history, setHistory] = useState<DeploymentRecord[]>([]);
@@ -824,7 +826,13 @@ const DeploymentDetail: React.FC = () => {
                   wordBreak: "break-all",
                 }}
               >
-                {project?.repoUrl} • {project?.branch}
+                {isLocalProject ? (
+                  <>📁 {project?.deployPath || "—"}</>
+                ) : (
+                  <>
+                    {project?.repoUrl} • {project?.branch}
+                  </>
+                )}
               </Typography>
             </Box>
             <Box
@@ -1002,96 +1010,98 @@ const DeploymentDetail: React.FC = () => {
                 {project?.startCommand || "—"}
               </Typography>
             </Box>
-            {/* Webhook — full setup guide */}
-            <Box
-              className="detail-item detail-webhook"
-              sx={{ gridColumn: "1 / -1", minWidth: 0 }}
-            >
+            {/* Webhook — full setup guide (git only) */}
+            {!isLocalProject && (
               <Box
-                sx={{
-                  display: "flex",
-                  alignItems: { xs: "flex-start", sm: "center" },
-                  justifyContent: "space-between",
-                  flexDirection: { xs: "column", sm: "row" },
-                  mb: 1,
-                  gap: 1,
-                }}
+                className="detail-item detail-webhook"
+                sx={{ gridColumn: "1 / -1", minWidth: 0 }}
               >
-                <Typography variant="caption" color="text.secondary">
-                  GitHub Webhook
-                </Typography>
                 <Box
                   sx={{
                     display: "flex",
+                    alignItems: { xs: "flex-start", sm: "center" },
+                    justifyContent: "space-between",
+                    flexDirection: { xs: "column", sm: "row" },
+                    mb: 1,
                     gap: 1,
-                    alignItems: "center",
-                    alignSelf: { xs: "flex-start", sm: "auto" },
-                    flexWrap: "wrap",
                   }}
                 >
-                  {webhookRegistered ? (
-                    <Chip
-                      label="⚡ Webhook Active"
-                      size="small"
-                      color="success"
-                      variant="outlined"
-                      sx={{ fontSize: 10 }}
-                    />
-                  ) : (
-                    <Chip
-                      label="🕐 Polling (60s)"
-                      size="small"
-                      color="default"
-                      variant="outlined"
-                      sx={{ fontSize: 10 }}
-                    />
-                  )}
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => {
-                      fetchWebhookInfo();
-                      setWebhookGuideOpen(true);
+                  <Typography variant="caption" color="text.secondary">
+                    GitHub Webhook
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 1,
+                      alignItems: "center",
+                      alignSelf: { xs: "flex-start", sm: "auto" },
+                      flexWrap: "wrap",
                     }}
-                    sx={{ fontSize: 11, whiteSpace: "nowrap" }}
                   >
-                    Setup Guide
-                  </Button>
+                    {webhookRegistered ? (
+                      <Chip
+                        label="⚡ Webhook Active"
+                        size="small"
+                        color="success"
+                        variant="outlined"
+                        sx={{ fontSize: 10 }}
+                      />
+                    ) : (
+                      <Chip
+                        label="🕐 Polling (60s)"
+                        size="small"
+                        color="default"
+                        variant="outlined"
+                        sx={{ fontSize: 10 }}
+                      />
+                    )}
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        fetchWebhookInfo();
+                        setWebhookGuideOpen(true);
+                      }}
+                      sx={{ fontSize: 11, whiteSpace: "nowrap" }}
+                    >
+                      Setup Guide
+                    </Button>
+                  </Box>
                 </Box>
-              </Box>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  minWidth: 0,
-                }}
-              >
-                <Typography
-                  variant="body2"
+                <Box
                   sx={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 11,
-                    opacity: 0.8,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
                     minWidth: 0,
                   }}
                 >
-                  {webhookUrl ||
-                    `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${projectId}`}
-                </Typography>
-                <IconButton
-                  size="small"
-                  onClick={copyWebhookUrl}
-                  className="copy-webhook-btn"
-                >
-                  <ContentCopyIcon sx={{ fontSize: 14 }} />
-                </IconButton>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11,
+                      opacity: 0.8,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    {webhookUrl ||
+                      `${import.meta.env.VITE_API_URL || window.location.origin}/api/webhook/${projectId}`}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={copyWebhookUrl}
+                    className="copy-webhook-btn"
+                  >
+                    <ContentCopyIcon sx={{ fontSize: 14 }} />
+                  </IconButton>
+                </Box>
               </Box>
-            </Box>
+            )}
             <Box className="detail-item detail-autodeploy">
               <Typography variant="caption" color="text.secondary">
                 Auto-deploy
@@ -1110,7 +1120,11 @@ const DeploymentDetail: React.FC = () => {
                     color="text.secondary"
                     sx={{ fontSize: 10 }}
                   >
-                    {webhookRegistered ? "via webhook" : "polls every 60s"}
+                    {isLocalProject
+                      ? "file watcher"
+                      : webhookRegistered
+                        ? "via webhook"
+                        : "polls every 60s"}
                   </Typography>
                 )}
               </Box>
@@ -1555,6 +1569,7 @@ const DeploymentDetail: React.FC = () => {
         <TerminalTabs
           serverId={project.server._id}
           initialPath={project.deployPath}
+          height={500}
         />
       )}
 
@@ -2005,55 +2020,61 @@ const DeploymentDetail: React.FC = () => {
               sx={{ mb: 2 }}
               className="input-project-name"
             />
-            <TextField
-              label="Branch"
-              value={editForm.branch}
-              onChange={(e) =>
-                setEditForm({ ...editForm, branch: e.target.value })
-              }
-              sx={{ mb: 2 }}
-              className="input-project-branch"
-            />
-            <TextField
-              label="Repo Folder (Optional)"
-              placeholder="frontend, packages/api, ..."
-              value={editForm.repoFolder}
-              onChange={(e) =>
-                setEditForm({ ...editForm, repoFolder: e.target.value })
-              }
-              sx={{ mb: 2 }}
-              helperText="Subfolder inside the repo to run commands in. Leave empty for root."
-              className="input-repo-folder"
-              InputProps={{
-                endAdornment: (
-                  <Tooltip title="Browse folders on server">
-                    <span>
-                      <IconButton
-                        size="small"
-                        onClick={() => setFolderBrowserOpen(true)}
-                        disabled={!editForm.deployPath}
-                        className="btn-browse-folder"
-                      >
-                        <FolderOpenIcon fontSize="small" />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                ),
-              }}
-            />
-            <FolderBrowserDialog
-              open={folderBrowserOpen}
-              onClose={() => setFolderBrowserOpen(false)}
-              onSelect={(path) =>
-                setEditForm((prev) => ({ ...prev, repoFolder: path }))
-              }
-              serverId={
-                project?.server?._id || project?.server?.toString() || ""
-              }
-              repoUrl={project?.repoUrl || ""}
-              branch={editForm.branch || project?.branch || "main"}
-              deployPath={editForm.deployPath}
-            />
+            {!isLocalProject && (
+              <TextField
+                label="Branch"
+                value={editForm.branch}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, branch: e.target.value })
+                }
+                sx={{ mb: 2 }}
+                className="input-project-branch"
+              />
+            )}
+            {!isLocalProject && (
+              <>
+                <TextField
+                  label="Repo Folder (Optional)"
+                  placeholder="frontend, packages/api, ..."
+                  value={editForm.repoFolder}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, repoFolder: e.target.value })
+                  }
+                  sx={{ mb: 2 }}
+                  helperText="Subfolder inside the repo to run commands in. Leave empty for root."
+                  className="input-repo-folder"
+                  InputProps={{
+                    endAdornment: (
+                      <Tooltip title="Browse folders on server">
+                        <span>
+                          <IconButton
+                            size="small"
+                            onClick={() => setFolderBrowserOpen(true)}
+                            disabled={!editForm.deployPath}
+                            className="btn-browse-folder"
+                          >
+                            <FolderOpenIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    ),
+                  }}
+                />
+                <FolderBrowserDialog
+                  open={folderBrowserOpen}
+                  onClose={() => setFolderBrowserOpen(false)}
+                  onSelect={(path) =>
+                    setEditForm((prev) => ({ ...prev, repoFolder: path }))
+                  }
+                  serverId={
+                    project?.server?._id || project?.server?.toString() || ""
+                  }
+                  repoUrl={project?.repoUrl || ""}
+                  branch={editForm.branch || project?.branch || "main"}
+                  deployPath={editForm.deployPath}
+                />
+              </>
+            )}
             <TextField
               label="Deploy Path (Source)"
               value={editForm.deployPath}
@@ -2765,7 +2786,15 @@ const DeploymentDetail: React.FC = () => {
             <strong>{project?.server?.name}</strong>?
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Branch: <strong>{project?.branch}</strong>
+            {isLocalProject ? (
+              <>
+                Source: <strong>Local Directory</strong>
+              </>
+            ) : (
+              <>
+                Branch: <strong>{project?.branch}</strong>
+              </>
+            )}
           </Typography>
         </DialogContent>
         <DialogActions className="confirm-dialog-actions">

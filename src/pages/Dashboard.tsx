@@ -35,6 +35,8 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import AddIcon from "@mui/icons-material/Add";
 import ServerResourceChart from "../components/ServerResourceChart";
 import SEO from "../components/SEO";
+import { useThemeMode } from "../contexts/ThemeContext";
+import EndUserDashboard from "./EndUserDashboard";
 
 interface ChartDay {
   date: string;
@@ -86,10 +88,38 @@ const StatCard: React.FC<{
       overflow: "hidden",
       height: "100%",
       cursor: onClick ? "pointer" : "default",
-      transition: "all 0.25s ease",
+      transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+      animation: "fadeInUp 0.6s ease-out both",
+      background: (theme: any) =>
+        theme.palette.mode === "dark"
+          ? "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)"
+          : "linear-gradient(145deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%)",
+      backdropFilter: "blur(20px)",
+      border: "1px solid",
+      borderColor: (theme: any) =>
+        theme.palette.mode === "dark"
+          ? "rgba(255,255,255,0.05)"
+          : "rgba(0,0,0,0.05)",
+      borderRadius: 4,
+      display: "flex",
+      flexDirection: "column",
       "&:hover": {
-        transform: "translateY(-4px)",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+        transform: onClick ? "translateY(-6px) scale(1.02)" : "none",
+        boxShadow: (theme: any) =>
+          theme.palette.mode === "dark"
+            ? `0 20px 40px -10px rgba(0,0,0,0.5), 0 0 20px -5px ${gradient.split(",")[1]?.trim() || "rgba(255,255,255,0.1)"}40`
+            : "0 20px 40px -12px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)",
+        borderColor: (theme: any) =>
+          theme.palette.mode === "dark"
+            ? "rgba(255,255,255,0.1)"
+            : "rgba(0,0,0,0.1)",
+        "& .icon-container": {
+          transform: "scale(1.1) rotate(5deg)",
+          background: gradient,
+          color: "#fff",
+          boxShadow: `0 8px 24px -6px ${gradient.split(",")[1]?.trim() || "rgba(0,0,0,0.2)"}`,
+          "& svg": { color: "#fff !important" },
+        },
       },
       "&::before": {
         content: '""',
@@ -97,39 +127,112 @@ const StatCard: React.FC<{
         top: 0,
         left: 0,
         right: 0,
-        height: 3,
+        height: 4,
         background: gradient,
+        opacity: 0.8,
+        transition: "opacity 0.3s ease",
+      },
+      "&:hover::before": {
+        opacity: 1,
       },
     }}
   >
-    <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-      <Box sx={{ fontSize: { xs: 22, md: 28 }, mb: 1 }}>{icon}</Box>
+    <CardContent
+      sx={{
+        p: { xs: 2.5, md: 3.5 },
+        flexGrow: 1,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <Box
+        className="icon-container"
+        sx={{
+          width: 48,
+          height: 48,
+          borderRadius: 3,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          mb: 3,
+          background: (theme: any) =>
+            theme.palette.mode === "dark"
+              ? "rgba(255,255,255,0.05)"
+              : "rgba(0,0,0,0.04)",
+          border: "1px solid",
+          borderColor: (theme: any) =>
+            theme.palette.mode === "dark"
+              ? "rgba(255,255,255,0.08)"
+              : "rgba(0,0,0,0.08)",
+          transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+        }}
+      >
+        <Box
+          sx={{
+            fontSize: 26,
+            display: "flex",
+            transition: "all 0.4s ease",
+          }}
+        >
+          {icon}
+        </Box>
+      </Box>
+
       <Typography
         variant="h3"
         sx={{
-          fontWeight: 700,
+          fontWeight: 800,
           mb: 0.5,
-          fontSize: { xs: "1.5rem", md: "2rem" },
+          fontSize: { xs: "1.8rem", md: "2.4rem" },
+          letterSpacing: "-0.03em",
+          lineHeight: 1,
+          background: (theme: any) =>
+            theme.palette.mode === "dark" ? "#fff" : "none",
+          WebkitBackgroundClip: (theme: any) =>
+            theme.palette.mode === "dark" ? "text" : "none",
+          WebkitTextFillColor: (theme: any) =>
+            theme.palette.mode === "dark" ? "transparent" : "inherit",
         }}
       >
         {value}
       </Typography>
+
       <Typography
         variant="body2"
         color="text.secondary"
-        fontWeight={500}
-        sx={{ fontSize: { xs: 12, md: 14 } }}
+        fontWeight={600}
+        sx={{
+          fontSize: { xs: 12.5, md: 14 },
+          letterSpacing: "0.01em",
+          mt: 0.5,
+        }}
       >
         {label}
       </Typography>
+
       {sub && (
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ mt: 0.5, display: "block", fontSize: { xs: 10, md: 12 } }}
-        >
-          {sub}
-        </Typography>
+        <Box sx={{ mt: "auto", pt: 2 }}>
+          <Chip
+            label={sub}
+            size="small"
+            sx={{
+              height: 24,
+              fontSize: 11,
+              fontWeight: 600,
+              bgcolor: (theme: any) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.08)"
+                  : "rgba(0,0,0,0.06)",
+              color: "text.secondary",
+              border: "1px solid",
+              borderColor: (theme: any) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.05)"
+                  : "rgba(0,0,0,0.05)",
+              "& .MuiChip-label": { px: 1.5 },
+            }}
+          />
+        </Box>
       )}
     </CardContent>
   </Card>
@@ -140,8 +243,10 @@ const Dashboard: React.FC = () => {
   const { t } = useTranslation();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const { interfaceMode } = useThemeMode();
 
   useEffect(() => {
+    if (interfaceMode === "enduser") return; // skip fetch in enduser mode
     const fetchStats = async () => {
       try {
         const { data } = await api.get("/stats");
@@ -153,7 +258,12 @@ const Dashboard: React.FC = () => {
       }
     };
     fetchStats();
-  }, []);
+  }, [interfaceMode]);
+
+  // End-user mode: render simplified dashboard (MUST be after all hooks)
+  if (interfaceMode === "enduser") {
+    return <EndUserDashboard />;
+  }
 
   if (loading) {
     return (
@@ -228,17 +338,52 @@ const Dashboard: React.FC = () => {
       </Box>
 
       {/* Quick Actions */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-          <Typography variant="h6" sx={{ mb: 2, fontSize: 16 }}>
+      <Card
+        sx={{
+          mb: 3,
+          background: (theme: any) =>
+            theme.palette.mode === "dark"
+              ? "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)"
+              : "linear-gradient(145deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%)",
+          backdropFilter: "blur(20px)",
+          border: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+          <Typography
+            variant="h6"
+            sx={{
+              mb: 2,
+              fontSize: 16,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <Box
+              sx={{
+                width: 8,
+                height: 24,
+                borderRadius: 1,
+                bgcolor: "primary.main",
+              }}
+            />
             {t("dashboard.quickActions")}
           </Typography>
           <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
             <Button
               component={Link}
               to="/servers"
-              variant="outlined"
+              variant="contained"
+              color="primary"
               startIcon={<AddIcon />}
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                boxShadow: "0 4px 14px 0 rgba(249, 115, 22, 0.39)",
+              }}
             >
               {t("dashboard.addServer")}
             </Button>
@@ -247,6 +392,14 @@ const Dashboard: React.FC = () => {
               to="/projects"
               variant="outlined"
               startIcon={<AddIcon />}
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                bgcolor: (theme: any) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.03)"
+                    : "rgba(0,0,0,0.02)",
+              }}
             >
               {t("dashboard.newProject")}
             </Button>
@@ -256,21 +409,52 @@ const Dashboard: React.FC = () => {
 
       {/* F1: Deployment History Chart */}
       {stats?.deployChart && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography variant="h6" sx={{ mb: 2, fontSize: 16 }}>
+        <Card
+          sx={{
+            mb: 3,
+            background: (theme: any) =>
+              theme.palette.mode === "dark"
+                ? "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)"
+                : "none",
+            backdropFilter: "blur(20px)",
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+            <Typography
+              variant="h6"
+              sx={{
+                mb: 3,
+                fontSize: 16,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+              }}
+            >
+              <Box
+                sx={{
+                  width: 8,
+                  height: 24,
+                  borderRadius: 1,
+                  bgcolor: "#10b981",
+                }}
+              />
               {t("dashboard.deploymentsChart")}
             </Typography>
             <Box
               sx={{
                 width: "100%",
-                height: 220,
+                height: 250,
                 minWidth: 200,
-                position: "relative",
               }}
             >
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={stats.deployChart}>
+                <AreaChart
+                  data={stats.deployChart}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
                   <defs>
                     <linearGradient
                       id="successGrad"
@@ -279,33 +463,46 @@ const Dashboard: React.FC = () => {
                       x2="0"
                       y2="1"
                     >
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
                       <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="failedGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
                       <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke="rgba(255,255,255,0.06)"
+                    vertical={false}
+                    stroke="rgba(150,150,150,0.1)"
                   />
                   <XAxis
                     dataKey="day"
-                    tick={{ fill: "#9ca3af", fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#9ca3af", fontSize: 11, fontWeight: 500 }}
+                    dy={10}
                   />
                   <YAxis
                     allowDecimals={false}
-                    tick={{ fill: "#9ca3af", fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#9ca3af", fontSize: 11, fontWeight: 500 }}
                   />
                   <RechartsTooltip
                     contentStyle={{
-                      background: "var(--terminal-bg, #1f2937)",
-                      border:
-                        "1px solid var(--border-color, rgba(255,255,255,0.08))",
+                      background: "rgba(15, 23, 42, 0.9)",
+                      backdropFilter: "blur(10px)",
+                      border: "1px solid rgba(255,255,255,0.1)",
                       borderRadius: 8,
-                      color: "var(--terminal-text, #f9fafb)",
+                      color: "#f9fafb",
+                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
+                      fontSize: 13,
+                      padding: "10px 14px",
+                    }}
+                    itemStyle={{
+                      paddingTop: 4,
+                      fontWeight: 600,
                     }}
                   />
                   <Area
@@ -313,7 +510,9 @@ const Dashboard: React.FC = () => {
                     dataKey="success"
                     stroke="#10b981"
                     fill="url(#successGrad)"
-                    strokeWidth={2}
+                    strokeWidth={3}
+                    dot={{ r: 0, strokeWidth: 0 }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: "#10b981" }}
                     name="Success"
                   />
                   <Area
@@ -321,7 +520,9 @@ const Dashboard: React.FC = () => {
                     dataKey="failed"
                     stroke="#ef4444"
                     fill="url(#failedGrad)"
-                    strokeWidth={2}
+                    strokeWidth={3}
+                    dot={{ r: 0, strokeWidth: 0 }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: "#ef4444" }}
                     name="Failed"
                   />
                 </AreaChart>
@@ -332,18 +533,58 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* Recent Deployments */}
-      <Card sx={{ overflow: "hidden" }}>
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-          <Typography variant="h6" sx={{ mb: 2, fontSize: 16 }}>
+      <Card
+        sx={{
+          mb: 3,
+          overflow: "hidden",
+          background: (theme: any) =>
+            theme.palette.mode === "dark"
+              ? "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)"
+              : "none",
+          backdropFilter: "blur(20px)",
+          border: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+          <Typography
+            variant="h6"
+            sx={{
+              mb: 3,
+              fontSize: 16,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <Box
+              sx={{
+                width: 8,
+                height: 24,
+                borderRadius: 1,
+                bgcolor: "var(--primary-main)",
+              }}
+            />
             {t("dashboard.recentDeployments")}
           </Typography>
 
           {!stats?.recentDeployments || stats.recentDeployments.length === 0 ? (
-            <Box sx={{ textAlign: "center", py: 6 }}>
+            <Box sx={{ textAlign: "center", py: 8 }}>
               <RocketLaunchIcon
-                sx={{ fontSize: 48, color: "text.secondary", mb: 2 }}
+                sx={{
+                  fontSize: 56,
+                  color: "text.secondary",
+                  opacity: 0.5,
+                  mb: 2,
+                }}
               />
-              <Typography variant="h6" color="text.secondary">
+              <Typography
+                variant="h6"
+                color="text.primary"
+                fontWeight={600}
+                gutterBottom
+              >
                 {t("dashboard.noDeployments")}
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -354,18 +595,35 @@ const Dashboard: React.FC = () => {
             <TableContainer
               component={Paper}
               elevation={0}
-              sx={{ bgcolor: "transparent", overflowX: "auto" }}
+              sx={{
+                bgcolor: "transparent",
+                overflowX: "auto",
+                border: "1px solid",
+                borderColor: (theme: any) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.05)"
+                    : "rgba(0,0,0,0.05)",
+                borderRadius: 2,
+              }}
             >
-              <Table size="small">
+              <Table size="medium">
                 <TableHead>
-                  <TableRow>
+                  <TableRow
+                    sx={{
+                      bgcolor: (theme: any) =>
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.03)"
+                          : "rgba(0,0,0,0.02)",
+                    }}
+                  >
                     <TableCell
                       sx={{
                         fontWeight: 600,
                         color: "text.secondary",
-                        fontSize: { xs: 10, md: 12 },
+                        fontSize: { xs: 11, md: 12 },
                         textTransform: "uppercase",
-                        px: { xs: 1, md: 2 },
+                        letterSpacing: "0.05em",
+                        py: 2,
                       }}
                     >
                       {t("common.project")}
@@ -374,9 +632,10 @@ const Dashboard: React.FC = () => {
                       sx={{
                         fontWeight: 600,
                         color: "text.secondary",
-                        fontSize: { xs: 10, md: 12 },
+                        fontSize: { xs: 11, md: 12 },
                         textTransform: "uppercase",
-                        px: { xs: 1, md: 2 },
+                        letterSpacing: "0.05em",
+                        py: 2,
                       }}
                     >
                       {t("common.server")}
@@ -385,9 +644,10 @@ const Dashboard: React.FC = () => {
                       sx={{
                         fontWeight: 600,
                         color: "text.secondary",
-                        fontSize: { xs: 10, md: 12 },
+                        fontSize: { xs: 11, md: 12 },
                         textTransform: "uppercase",
-                        px: { xs: 1, md: 2 },
+                        letterSpacing: "0.05em",
+                        py: 2,
                       }}
                     >
                       {t("common.status")}
@@ -396,9 +656,10 @@ const Dashboard: React.FC = () => {
                       sx={{
                         fontWeight: 600,
                         color: "text.secondary",
-                        fontSize: { xs: 10, md: 12 },
+                        fontSize: { xs: 11, md: 12 },
                         textTransform: "uppercase",
-                        px: { xs: 1, md: 2 },
+                        letterSpacing: "0.05em",
+                        py: 2,
                       }}
                     >
                       {t("dashboard.triggeredBy")}
@@ -407,9 +668,10 @@ const Dashboard: React.FC = () => {
                       sx={{
                         fontWeight: 600,
                         color: "text.secondary",
-                        fontSize: { xs: 10, md: 12 },
+                        fontSize: { xs: 11, md: 12 },
                         textTransform: "uppercase",
-                        px: { xs: 1, md: 2 },
+                        letterSpacing: "0.05em",
+                        py: 2,
                         display: { xs: "none", sm: "table-cell" },
                       }}
                     >
@@ -429,17 +691,20 @@ const Dashboard: React.FC = () => {
                       }}
                       sx={{
                         cursor: dep.project?._id ? "pointer" : "default",
-                        transition: "background 0.15s",
+                        transition: "background 0.2sease",
                         "&:hover": {
-                          bgcolor: "action.selected",
+                          bgcolor: (theme: any) =>
+                            theme.palette.mode === "dark"
+                              ? "rgba(255,255,255,0.04) !important"
+                              : "rgba(0,0,0,0.02) !important",
                         },
                       }}
                     >
                       <TableCell
                         sx={{
                           fontWeight: 600,
-                          px: { xs: 1, md: 2 },
-                          fontSize: { xs: 12, md: 14 },
+                          fontSize: { xs: 13, md: 14 },
+                          py: 2,
                         }}
                       >
                         {dep.project?.name || "—"}
@@ -447,27 +712,30 @@ const Dashboard: React.FC = () => {
                       <TableCell
                         sx={{
                           fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: { xs: 11, md: 13 },
-                          px: { xs: 1, md: 2 },
+                          fontSize: { xs: 12, md: 13 },
+                          color: "text.secondary",
+                          py: 2,
                         }}
                       >
                         {dep.server?.name || "—"}
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ py: 2 }}>
                         <Chip
                           label={dep.status}
                           size="small"
                           color={statusColor[dep.status] || "default"}
                           variant="outlined"
+                          sx={{ fontWeight: 600, height: 24, fontSize: 11 }}
                         />
                       </TableCell>
-                      <TableCell sx={{ px: { xs: 1, md: 2 } }}>
+                      <TableCell sx={{ py: 2, fontSize: 13 }}>
                         {dep.triggeredBy}
                       </TableCell>
                       <TableCell
                         sx={{
                           color: "text.secondary",
-                          fontSize: { xs: 11, md: 13 },
+                          fontSize: { xs: 12, md: 13 },
+                          py: 2,
                           display: { xs: "none", sm: "table-cell" },
                         }}
                       >

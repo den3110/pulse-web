@@ -46,6 +46,9 @@ import LogStudio from "./pages/LogStudio";
 import OAuthCallback from "./pages/OAuthCallback";
 import Layout from "./components/Layout";
 import AcceptInvite from "./pages/AcceptInvite";
+import SmartDeploy from "./pages/SmartDeploy";
+import OneClickInstall from "./pages/OneClickInstall";
+import OneClickAppDetail from "./pages/OneClickAppDetail";
 import "./index.css";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
@@ -164,7 +167,14 @@ function App() {
                   }
                 />
 
-                <Route path="/" element={<Landing />} />
+                <Route
+                  path="/"
+                  element={
+                    <PublicRoute>
+                      <Landing />
+                    </PublicRoute>
+                  }
+                />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/docs" element={<Docs />} />
                 <Route path="/accept-invite" element={<AcceptInvite />} />
@@ -178,6 +188,7 @@ function App() {
                   }
                 >
                   <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="smart-deploy" element={<SmartDeploy />} />
                   <Route
                     path="infrastructure"
                     element={<InfrastructureMap />}
@@ -208,6 +219,11 @@ function App() {
                   <Route path="vpn" element={<VpnManager />} />
                   <Route path="bandwidth" element={<GlobalBandwidth />} />
                   <Route path="logs" element={<LogStudio />} />
+                  <Route path="one-click" element={<OneClickInstall />} />
+                  <Route
+                    path="one-click/:id/:appId"
+                    element={<OneClickAppDetail />}
+                  />
                   <Route
                     path="infrastructure"
                     element={<InfrastructureMap />}

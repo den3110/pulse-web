@@ -151,6 +151,40 @@ const apiService = {
   deleteOutput: (id: string) => api.delete(`/projects/${id}/output`),
   reorderProjects: (ids: string[]) => api.put("/projects/reorder", { ids }),
 
+  // Smart Deploy
+  smartDeployAnalyze: (data: {
+    repoUrl: string;
+    branch?: string;
+    serverId: string;
+    customToken?: string;
+  }) => api.post("/smart-deploy/analyze", data),
+  smartDeployCheckServer: (data: {
+    serverId: string;
+    requiredTools: string[];
+  }) => api.post("/smart-deploy/check-server", data),
+  smartDeployExecute: (data: any) => api.post("/smart-deploy/execute", data),
+
+  // Nginx UI Builder
+  generateNginxConfig: (
+    serverId: string,
+    data: {
+      domains: string[];
+      type: "proxy" | "static";
+      proxyPass?: string;
+      websockets?: boolean;
+      rootPath?: string;
+      indexFiles?: string;
+      cors?: boolean;
+      maxBodySize?: string;
+      ssl?: boolean;
+      gzip?: boolean;
+      securityHeaders?: boolean;
+      proxyConnectTimeout?: string;
+      proxyReadTimeout?: string;
+      proxySendTimeout?: string;
+    },
+  ) => api.post(`/nginx/${serverId}/generate-config`, data),
+
   // Auth (if needed explicitly)
   login: (data: any) => api.post("/auth/login", data),
   register: (data: any) => api.post("/auth/register", data),
@@ -159,6 +193,25 @@ const apiService = {
     localStorage.removeItem("refreshToken");
     window.location.href = "/login";
   },
+
+  // Admin Panel
+  adminGetDashboard: () => api.get("/admin/dashboard"),
+  adminGetProjects: (params?: any) => api.get("/admin/projects", { params }),
+  adminDeleteProject: (id: string) => api.delete(`/admin/projects/${id}`),
+  adminGetDeployments: (params?: any) =>
+    api.get("/admin/deployments", { params }),
+  adminGetUsers: (params?: any) => api.get("/admin/users", { params }),
+  adminCreateUser: (data: any) => api.post("/admin/users", data),
+  adminUpdateUser: (id: string, data: any) =>
+    api.put(`/admin/users/${id}`, data),
+  adminDeleteUser: (id: string) => api.delete(`/admin/users/${id}`),
+  adminResetPassword: (id: string, newPassword: string) =>
+    api.post(`/admin/users/${id}/reset-password`, { newPassword }),
+  adminUpdatePlan: (id: string, data: any) =>
+    api.put(`/admin/users/${id}/plan`, data),
+  adminToggleBan: (id: string) => api.post(`/admin/users/${id}/ban`),
+  adminGetSystemConfig: () => api.get("/admin/system"),
+  adminUpdateSystemConfig: (data: any) => api.put("/admin/system", data),
 
   // Generic methods if needed
   get: api.get,

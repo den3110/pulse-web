@@ -11,6 +11,7 @@ import { getTheme } from "../theme";
 type ThemeMode = "dark" | "light";
 type SidebarPosition = "left" | "right";
 type MobileLayout = "drawer" | "bottom";
+export type InterfaceMode = "developer" | "enduser";
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -21,6 +22,8 @@ interface ThemeContextType {
   setPrimaryColor: (color: string) => void;
   mobileLayout: MobileLayout;
   setMobileLayout: (layout: MobileLayout) => void;
+  interfaceMode: InterfaceMode;
+  setInterfaceMode: (mode: InterfaceMode) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -32,6 +35,8 @@ const ThemeContext = createContext<ThemeContextType>({
   setPrimaryColor: () => {},
   mobileLayout: "drawer",
   setMobileLayout: () => {},
+  interfaceMode: "developer",
+  setInterfaceMode: () => {},
 });
 
 export const useThemeMode = () => useContext(ThemeContext);
@@ -59,6 +64,12 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({
     return (localStorage.getItem("mobileLayout") as MobileLayout) || "drawer";
   });
 
+  const [interfaceMode, setInterfaceMode] = useState<InterfaceMode>(() => {
+    return (
+      (localStorage.getItem("interfaceMode") as InterfaceMode) || "developer"
+    );
+  });
+
   useEffect(() => {
     localStorage.setItem("themeMode", mode);
   }, [mode]);
@@ -74,6 +85,10 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     localStorage.setItem("mobileLayout", mobileLayout);
   }, [mobileLayout]);
+
+  useEffect(() => {
+    localStorage.setItem("interfaceMode", interfaceMode);
+  }, [interfaceMode]);
 
   const toggleTheme = () => {
     setMode((prev) => (prev === "dark" ? "light" : "dark"));
@@ -95,6 +110,8 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({
         setPrimaryColor,
         mobileLayout,
         setMobileLayout,
+        interfaceMode,
+        setInterfaceMode,
       }}
     >
       <MuiThemeProvider theme={theme}>

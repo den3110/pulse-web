@@ -177,118 +177,186 @@ const ServerResourceChart: React.FC = () => {
   }
 
   return (
-    <Grid container spacing={3}>
+    <Grid container spacing={3} sx={{ alignItems: "stretch" }}>
       {/* CPU & Memory Chart */}
       <Grid item xs={12} md={8}>
-        <Card sx={{ height: "100%", minHeight: 400 }}>
-          <CardContent>
+        <Card
+          sx={{
+            height: "100%",
+            minHeight: 400,
+            background:
+              theme.palette.mode === "dark"
+                ? "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)"
+                : "none",
+            backdropFilter: "blur(20px)",
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
             <Box
               sx={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                mb: 3,
+                mb: 4,
               }}
             >
-              <Typography variant="h6" fontWeight={600}>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 24,
+                    borderRadius: 1,
+                    bgcolor: "var(--primary-main)",
+                  }}
+                />
                 {t("dashboard.systemResources")}
               </Typography>
-              <Box sx={{ display: "flex", gap: 2 }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box sx={{ display: "flex", gap: 2.5 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
                   <CircleIcon
-                    sx={{ fontSize: 12, color: theme.palette.primary.main }}
+                    sx={{ fontSize: 10, color: theme.palette.primary.main }}
                   />
-                  <Typography variant="caption">CPU</Typography>
+                  <Typography
+                    variant="caption"
+                    fontWeight={600}
+                    color="text.secondary"
+                  >
+                    CPU
+                  </Typography>
                 </Box>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
                   <CircleIcon
-                    sx={{ fontSize: 12, color: theme.palette.secondary.main }}
+                    sx={{ fontSize: 10, color: theme.palette.secondary.main }}
                   />
-                  <Typography variant="caption">RAM</Typography>
+                  <Typography
+                    variant="caption"
+                    fontWeight={600}
+                    color="text.secondary"
+                  >
+                    RAM
+                  </Typography>
                 </Box>
               </Box>
             </Box>
 
             {loading && !currentStats ? (
-              <LinearProgress />
+              <LinearProgress sx={{ borderRadius: 2 }} />
             ) : error ? (
-              <Alert severity="error">{error}</Alert>
+              <Alert severity="error" sx={{ borderRadius: 2 }}>
+                {error}
+              </Alert>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={data}>
-                  <defs>
-                    <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="5%"
-                        stopColor={theme.palette.primary.main}
-                        stopOpacity={0.3}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor={theme.palette.primary.main}
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                    <linearGradient id="colorMem" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="5%"
-                        stopColor={theme.palette.secondary.main}
-                        stopOpacity={0.3}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor={theme.palette.secondary.main}
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={theme.palette.divider}
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="time"
-                    stroke={theme.palette.text.secondary}
-                    style={{ fontSize: 12 }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    stroke={theme.palette.text.secondary}
-                    style={{ fontSize: 12 }}
-                    tickLine={false}
-                    axisLine={false}
-                    domain={[0, 100]}
-                    unit="%"
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: theme.palette.background.paper,
-                      border: `1px solid ${theme.palette.divider}`,
-                      borderRadius: 8,
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="cpu"
-                    stroke={theme.palette.primary.main}
-                    fillOpacity={1}
-                    fill="url(#colorCpu)"
-                    strokeWidth={2}
-                    name="CPU Usage"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="memory"
-                    stroke={theme.palette.secondary.main}
-                    fillOpacity={1}
-                    fill="url(#colorMem)"
-                    strokeWidth={2}
-                    name="Memory Usage"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <Box sx={{ height: 300, width: "100%", ml: -2 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={data}>
+                    <defs>
+                      <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
+                        <stop
+                          offset="5%"
+                          stopColor={theme.palette.primary.main}
+                          stopOpacity={0.4}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor={theme.palette.primary.main}
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                      <linearGradient id="colorMem" x1="0" y1="0" x2="0" y2="1">
+                        <stop
+                          offset="5%"
+                          stopColor={theme.palette.secondary.main}
+                          stopOpacity={0.4}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor={theme.palette.secondary.main}
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="rgba(150,150,150,0.1)"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="time"
+                      stroke={theme.palette.text.secondary}
+                      style={{ fontSize: 11, fontWeight: 500 }}
+                      tickLine={false}
+                      axisLine={false}
+                      dy={10}
+                    />
+                    <YAxis
+                      stroke={theme.palette.text.secondary}
+                      style={{ fontSize: 11, fontWeight: 500 }}
+                      tickLine={false}
+                      axisLine={false}
+                      domain={[0, 100]}
+                      unit="%"
+                      dx={-10}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "rgba(15, 23, 42, 0.9)",
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: 8,
+                        color: "#f9fafb",
+                        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
+                        fontSize: 13,
+                        padding: "10px 14px",
+                      }}
+                      itemStyle={{
+                        paddingTop: 4,
+                        fontWeight: 600,
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="cpu"
+                      stroke={theme.palette.primary.main}
+                      fillOpacity={1}
+                      fill="url(#colorCpu)"
+                      strokeWidth={3}
+                      name="CPU Usage"
+                      dot={{ r: 0 }}
+                      activeDot={{
+                        r: 6,
+                        strokeWidth: 0,
+                        fill: theme.palette.primary.main,
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="memory"
+                      stroke={theme.palette.secondary.main}
+                      fillOpacity={1}
+                      fill="url(#colorMem)"
+                      strokeWidth={3}
+                      name="Memory Usage"
+                      dot={{ r: 0 }}
+                      activeDot={{
+                        r: 6,
+                        strokeWidth: 0,
+                        fill: theme.palette.secondary.main,
+                      }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Box>
             )}
           </CardContent>
         </Card>
@@ -298,20 +366,31 @@ const ServerResourceChart: React.FC = () => {
       <Grid item xs={12} md={4}>
         <Stack spacing={3} sx={{ height: "100%" }}>
           {/* Server Info Card */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
+          <Card
+            sx={{
+              background:
+                theme.palette.mode === "dark"
+                  ? "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)"
+                  : "none",
+              backdropFilter: "blur(20px)",
+              border: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+              <Typography variant="h6" fontWeight={700} gutterBottom>
                 {selectedServer.name}
               </Typography>
               <Typography
                 variant="body2"
                 color="text.secondary"
+                fontFamily="'JetBrains Mono', monospace"
                 noWrap
                 gutterBottom
               >
                 {selectedServer.host}
               </Typography>
-              <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                 <Chip
                   label={
                     currentStats?.uptime
@@ -319,106 +398,224 @@ const ServerResourceChart: React.FC = () => {
                       : "Checking..."
                   }
                   size="small"
-                  color="success"
-                  variant="outlined"
+                  color={currentStats?.uptime ? "success" : "default"}
+                  sx={{
+                    fontWeight: 600,
+                    borderRadius: 1.5,
+                    bgcolor: currentStats?.uptime
+                      ? "rgba(16, 185, 129, 0.1)"
+                      : "rgba(150, 150, 150, 0.1)",
+                    color: currentStats?.uptime ? "#10b981" : "text.secondary",
+                    border: "none",
+                  }}
                 />
               </Stack>
             </CardContent>
           </Card>
 
-          {/* Disk Usage Card */}
-          <Card sx={{ flex: 1 }}>
-            <CardContent>
-              <Box
-                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
-              >
-                <StorageIcon color="action" />
-                <Typography variant="subtitle1">Disk Usage</Typography>
-              </Box>
-
-              {currentStats ? (
-                <>
+          {/* Disk Usage & Memory Details side-by-side or stacked */}
+          <Card
+            sx={{
+              flex: 1,
+              background:
+                theme.palette.mode === "dark"
+                  ? "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)"
+                  : "none",
+              backdropFilter: "blur(20px)",
+              border: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+              {/* Box 1: Disk */}
+              <Box sx={{ mb: 4 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    mb: 2,
+                  }}
+                >
                   <Box
                     sx={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 1.5,
+                      bgcolor: "rgba(255,255,255,0.05)",
                       display: "flex",
-                      justifyContent: "space-between",
-                      mb: 1,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: "1px solid",
+                      borderColor: "divider",
                     }}
                   >
-                    <Typography variant="body2">
-                      Root (/) {currentStats.disk.percent}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {currentStats.disk.used} / {currentStats.disk.total}
-                    </Typography>
+                    <StorageIcon
+                      sx={{ fontSize: 18, color: "text.secondary" }}
+                    />
                   </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={currentStats.diskUsage}
-                    sx={{
-                      height: 10,
-                      borderRadius: 5,
-                      bgcolor: theme.palette.action.hover,
-                      "& .MuiLinearProgress-bar": {
-                        bgcolor:
-                          currentStats.diskUsage > 90
-                            ? "error.main"
-                            : "primary.main",
-                      },
-                    }}
-                  />
-                </>
-              ) : (
-                <LinearProgress />
-              )}
-            </CardContent>
-          </Card>
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight={600}
+                    color="text.secondary"
+                    textTransform="uppercase"
+                    letterSpacing="0.05em"
+                  >
+                    Disk Usage
+                  </Typography>
+                </Box>
 
-          {/* Memory Details Card */}
-          <Card sx={{ flex: 1 }}>
-            <CardContent>
-              <Box
-                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
-              >
-                <MemoryIcon color="action" />
-                <Typography variant="subtitle1">Memory Details</Typography>
+                {currentStats ? (
+                  <>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        mb: 1.5,
+                      }}
+                    >
+                      <Typography variant="body2" fontWeight={600}>
+                        Root (/) {currentStats.disk.percent}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        fontFamily="'JetBrains Mono', monospace"
+                      >
+                        {currentStats.disk.used} / {currentStats.disk.total}
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={currentStats.diskUsage}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        bgcolor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(255,255,255,0.05)"
+                            : "rgba(0,0,0,0.05)",
+                        "& .MuiLinearProgress-bar": {
+                          borderRadius: 4,
+                          bgcolor:
+                            currentStats.diskUsage > 90
+                              ? "error.main"
+                              : "primary.main",
+                        },
+                      }}
+                    />
+                  </>
+                ) : (
+                  <LinearProgress sx={{ borderRadius: 2 }} />
+                )}
               </Box>
-              {currentStats ? (
-                <Stack spacing={1}>
+
+              {/* Box 2: Memory */}
+              <Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    mb: 2,
+                  }}
+                >
                   <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 1.5,
+                      bgcolor: "rgba(255,255,255,0.05)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: "1px solid",
+                      borderColor: "divider",
+                    }}
                   >
-                    <Typography variant="body2" color="text.secondary">
-                      Total
-                    </Typography>
-                    <Typography variant="body2">
-                      {currentStats.memory.total}
-                    </Typography>
+                    <MemoryIcon
+                      sx={{ fontSize: 18, color: "text.secondary" }}
+                    />
                   </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight={600}
+                    color="text.secondary"
+                    textTransform="uppercase"
+                    letterSpacing="0.05em"
                   >
-                    <Typography variant="body2" color="text.secondary">
-                      Used
-                    </Typography>
-                    <Typography variant="body2">
-                      {currentStats.memory.used}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
+                    Memory Details
+                  </Typography>
+                </Box>
+                {currentStats ? (
+                  <Stack
+                    spacing={1.5}
+                    sx={{
+                      bgcolor: "rgba(0,0,0,0.1)",
+                      p: 2,
+                      borderRadius: 2,
+                      border: "1px solid rgba(255,255,255,0.03)",
+                    }}
                   >
-                    <Typography variant="body2" color="text.secondary">
-                      Free
-                    </Typography>
-                    <Typography variant="body2">
-                      {currentStats.memory.free}
-                    </Typography>
-                  </Box>
-                </Stack>
-              ) : (
-                <LinearProgress />
-              )}
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        fontWeight={500}
+                      >
+                        Total
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        fontFamily="'JetBrains Mono', monospace"
+                      >
+                        {currentStats.memory.total}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        fontWeight={500}
+                      >
+                        Used
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        fontFamily="'JetBrains Mono', monospace"
+                      >
+                        {currentStats.memory.used}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        fontWeight={500}
+                      >
+                        Free
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        fontFamily="'JetBrains Mono', monospace"
+                      >
+                        {currentStats.memory.free}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                ) : (
+                  <LinearProgress sx={{ borderRadius: 2 }} />
+                )}
+              </Box>
             </CardContent>
           </Card>
         </Stack>

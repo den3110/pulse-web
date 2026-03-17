@@ -32,6 +32,8 @@ import { useAuth } from "../contexts/AuthContext";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 
+import { glassCardStyle } from "../pages/Settings";
+
 export const TeamSettingsCard: React.FC = () => {
   const { user, fetchUser } = useAuth();
   const theme = useTheme();
@@ -175,7 +177,9 @@ export const TeamSettingsCard: React.FC = () => {
   );
 
   return (
-    <Card sx={{ height: "100%", gridColumn: { lg: "span 2" } }}>
+    <Card
+      sx={{ ...glassCardStyle, height: "100%", gridColumn: { lg: "span 2" } }}
+    >
       <CardContent sx={{ p: { xs: 2, md: 3 } }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
           <GroupsIcon sx={{ color: "primary.main" }} />

@@ -31,7 +31,8 @@ const NotFound: React.FC = () => {
           width: 80,
           height: 80,
           mb: 3,
-          background: "linear-gradient(135deg, var(--primary-main), var(--secondary-main))",
+          background:
+            "linear-gradient(135deg, var(--primary-main), var(--secondary-main))",
           boxShadow: "0 0 40px var(--primary-main-30)",
         }}
       >
@@ -43,7 +44,8 @@ const NotFound: React.FC = () => {
         sx={{
           fontSize: { xs: 72, md: 120 },
           fontWeight: 800,
-          background: "linear-gradient(135deg, var(--primary-main), var(--secondary-main), #fdba74)",
+          background:
+            "linear-gradient(135deg, var(--primary-main), var(--secondary-main), #fdba74)",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
           lineHeight: 1,
@@ -69,7 +71,7 @@ const NotFound: React.FC = () => {
         variant="contained"
         size="large"
         startIcon={<HomeIcon />}
-        onClick={() => navigate("/")}
+        onClick={() => navigate("/dashboard")}
         sx={{ px: 4, py: 1.2 }}
       >
         {t("notFound.goHome")}

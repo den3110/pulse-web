@@ -5,7 +5,8 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { useSearchParams } from "react-router-dom";
+import { zipSync } from "fflate";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -40,6 +41,7 @@ import {
   Tab,
   Tabs,
   LinearProgress,
+  CircularProgress,
   Menu,
   ListItemIcon,
   ListItemText,
@@ -61,6 +63,10 @@ import {
   Refresh as RefreshIcon,
   CreateNewFolder as CreateNewFolderIcon,
   CloudUpload as UploadIcon,
+  CloudDoneOutlined as CloudDoneIcon,
+  ErrorOutline as ErrorOutlineIcon,
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
   Download as DownloadIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
@@ -100,6 +106,7 @@ import {
   DriveFileMove as DriveFileMoveIcon,
   Terminal as TerminalIcon,
   NoteAdd as NoteAddIcon, // For New File
+  ViewInAr as DockerIcon, // For Run Docker
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
@@ -159,6 +166,15 @@ const detectLanguage = (filename: string): string => {
   return map[ext] || "text";
 };
 
+const isComposeFile = (name: string) => {
+  return [
+    "docker-compose.yml",
+    "docker-compose.yaml",
+    "compose.yml",
+    "compose.yaml",
+  ].includes(name.toLowerCase());
+};
+
 interface FileEntry {
   name: string;
   type: "file" | "directory" | "symlink";
@@ -212,6 +228,7 @@ interface RowProps {
   onEntryClick: (entry: FileEntry) => void;
   onContextMenu: (e: React.MouseEvent<HTMLElement>, entry: FileEntry) => void;
   onOpenTerminal: (entry: FileEntry) => void;
+  onRunDocker?: (entry: FileEntry) => void;
   folderSize?: string;
 }
 
@@ -223,6 +240,7 @@ const FileTableRow = React.memo<RowProps>(
     onEntryClick,
     onContextMenu,
     onOpenTerminal,
+    onRunDocker,
     folderSize,
   }) => (
     <TableRow
@@ -281,20 +299,42 @@ const FileTableRow = React.memo<RowProps>(
           {formatDate(entry.modified)}
         </Typography>
       </TableCell>
-      <TableCell align="center">
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenTerminal(entry);
+      <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 0.25,
           }}
-          sx={{ mr: 1 }}
         >
-          <TerminalIcon fontSize="small" />
-        </IconButton>
-        <IconButton size="small" onClick={(e) => onContextMenu(e, entry)}>
-          <MoreVertIcon fontSize="small" />
-        </IconButton>
+          {isComposeFile(entry.name) && onRunDocker && (
+            <Tooltip title="Run Docker Compose">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRunDocker(entry);
+                }}
+                sx={{ color: "primary.main" }}
+              >
+                <DockerIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenTerminal(entry);
+            }}
+          >
+            <TerminalIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={(e) => onContextMenu(e, entry)}>
+            <MoreVertIcon fontSize="small" />
+          </IconButton>
+        </Box>
       </TableCell>
     </TableRow>
   ),
@@ -306,7 +346,8 @@ const FileTableRow = React.memo<RowProps>(
       prev.onSelect === next.onSelect &&
       prev.onEntryClick === next.onEntryClick &&
       prev.onContextMenu === next.onContextMenu &&
-      prev.onOpenTerminal === next.onOpenTerminal
+      prev.onOpenTerminal === next.onOpenTerminal &&
+      prev.onRunDocker === next.onRunDocker
     );
   },
 );
@@ -319,6 +360,7 @@ const FileCardRow = React.memo<RowProps>(
     onEntryClick,
     onContextMenu,
     onOpenTerminal,
+    onRunDocker,
     folderSize,
   }) => (
     <Box
@@ -410,18 +452,34 @@ const FileCardRow = React.memo<RowProps>(
           </Box>
         </Box>
       </Box>
-      <IconButton
-        size="small"
-        onClick={(e) => {
-          e.stopPropagation();
-          onOpenTerminal(entry);
-        }}
-      >
-        <TerminalIcon fontSize="small" />
-      </IconButton>
-      <IconButton size="small" onClick={(e) => onContextMenu(e, entry)}>
-        <MoreVertIcon fontSize="small" />
-      </IconButton>
+      <Box sx={{ display: "flex", gap: 0.5 }}>
+        {isComposeFile(entry.name) && onRunDocker && (
+          <Tooltip title="Run Docker Compose">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRunDocker(entry);
+              }}
+              sx={{ color: "primary.main" }}
+            >
+              <DockerIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenTerminal(entry);
+          }}
+        >
+          <TerminalIcon fontSize="small" />
+        </IconButton>
+        <IconButton size="small" onClick={(e) => onContextMenu(e, entry)}>
+          <MoreVertIcon fontSize="small" />
+        </IconButton>
+      </Box>
     </Box>
   ),
   (prev, next) => {
@@ -438,6 +496,128 @@ const FileCardRow = React.memo<RowProps>(
 );
 
 /* ────────── Component ────────── */
+const UploadConflictDialog = ({
+  open,
+  onClose,
+  conflicts,
+  pendingUploads,
+  executeUpload,
+  t,
+}: {
+  open: boolean;
+  onClose: () => void;
+  conflicts: string[];
+  pendingUploads: { file: File; relativePath: string }[];
+  executeUpload: (files: { file: File; relativePath: string }[]) => void;
+  t: any;
+}) => {
+  const [selections, setSelections] = useState<Set<string>>(new Set());
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  useEffect(() => {
+    if (open) {
+      setSelections(new Set(conflicts));
+    }
+  }, [open, conflicts]);
+
+  const handleToggle = (name: string) => {
+    setSelections((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={isMobile}
+    >
+      <DialogTitle>
+        {t("ftp.uploadConflictTitle", "Upload Conflict")}
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          The following items already exist in this directory. Select the ones
+          you want to replace:
+        </Typography>
+        <List
+          dense
+          sx={{
+            maxHeight: 250,
+            overflow: "auto",
+            mt: 1,
+            mb: 2,
+            bgcolor: "background.default",
+            borderRadius: 1,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          {conflicts.map((name) => {
+            const isSelected = selections.has(name);
+            return (
+              <ListItem key={name} disablePadding>
+                <ListItemButton onClick={() => handleToggle(name)}>
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    <Checkbox
+                      edge="start"
+                      checked={isSelected}
+                      tabIndex={-1}
+                      disableRipple
+                      size="small"
+                    />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={name}
+                    primaryTypographyProps={{
+                      fontFamily: "monospace",
+                      variant: "body2",
+                    }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
+        </List>
+        <Box display="flex" justifyContent="space-between" mt={1}>
+          <Button
+            size="small"
+            onClick={() => setSelections(new Set(conflicts))}
+          >
+            Select All
+          </Button>
+          <Button size="small" onClick={() => setSelections(new Set())}>
+            Deselect All
+          </Button>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t("ftp.cancel", "Cancel")}</Button>
+        <Button
+          onClick={() => {
+            const filesToUpload = pendingUploads.filter((entry) => {
+              const top = entry.relativePath.split("/")[0];
+              return !conflicts.includes(top) || selections.has(top);
+            });
+            onClose();
+            executeUpload(filesToUpload);
+          }}
+          variant="contained"
+          color="primary"
+        >
+          {t("ftp.continueUpload", "Continue")}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 const FTPManager: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -458,6 +638,7 @@ const FTPManager: React.FC = () => {
 
   /* ─── Query Params for Deep Linking ─── */
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const initialPath = searchParams.get("path");
   const initialServerId = searchParams.get("server");
 
@@ -475,10 +656,10 @@ const FTPManager: React.FC = () => {
     }
   }, [initialServerId, servers, loadingServers, selectedServer, selectServer]);
 
-  // Effect: Update path if URL params change (e.g. navigation from another page while component is mounted)
+  // Effect: Update path if URL params change (e.g. browser back/forward, navigation from another page)
   useEffect(() => {
-    const p = searchParams.get("path");
-    if (p && p !== currentPath) {
+    const p = searchParams.get("path") || "/";
+    if (p !== currentPath) {
       setCurrentPath(p);
     }
   }, [searchParams]);
@@ -533,6 +714,7 @@ const FTPManager: React.FC = () => {
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<FileEntry | null>(null);
   const [newName, setNewName] = useState("");
+  const [overwriteConfirmOpen, setOverwriteConfirmOpen] = useState(false);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<FileEntry | null>(null);
@@ -556,6 +738,27 @@ const FTPManager: React.FC = () => {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Upload progress tracking
+  interface UploadItem {
+    id: string;
+    fileName: string;
+    progress: number;
+    status: "uploading" | "done" | "error";
+    error?: string;
+    totalFiles?: number;
+    completedFiles?: number;
+    failedFiles?: number;
+  }
+  const [uploadItems, setUploadItems] = useState<UploadItem[]>([]);
+  const [uploadPanelOpen, setUploadPanelOpen] = useState(true);
+  const [uploadPanelVisible, setUploadPanelVisible] = useState(false);
+
+  const [pendingUploads, setPendingUploads] = useState<
+    { file: File; relativePath: string }[]
+  >([]);
+  const [uploadConflicts, setUploadConflicts] = useState<string[]>([]);
+  const [uploadConflictOpen, setUploadConflictOpen] = useState(false);
 
   // Multi-select
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
@@ -630,6 +833,136 @@ const FTPManager: React.FC = () => {
   // Create File
   const [createFileOpen, setCreateFileOpen] = useState(false);
   const [createFileName, setCreateFileName] = useState("");
+
+  // Docker Compose Run
+  const [dockerRunOpen, setDockerRunOpen] = useState(false);
+  const [dockerRunLogs, setDockerRunLogs] = useState<string[]>([]);
+  const [dockerRunning, setDockerRunning] = useState(false);
+  const [dockerRunResult, setDockerRunResult] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+  const [dockerRunContainers, setDockerRunContainers] = useState<string[]>([]);
+  const logContainerRef = useRef<HTMLDivElement>(null);
+  const [dockerConfirmEntry, setDockerConfirmEntry] =
+    useState<FileEntry | null>(null);
+  const [dockerNameDialogOpen, setDockerNameDialogOpen] = useState(false);
+  const [dockerProjectName, setDockerProjectName] = useState("");
+
+  // Auto-scroll logs
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [dockerRunLogs]);
+
+  const hasComposeFile = useMemo(() => {
+    return entries.some((e) =>
+      [
+        "docker-compose.yml",
+        "docker-compose.yaml",
+        "compose.yml",
+        "compose.yaml",
+      ].includes(e.name.toLowerCase()),
+    );
+  }, [entries]);
+
+  const handleRunDocker = (entry?: FileEntry) => {
+    // Show confirmation dialog instead of running immediately
+    setDockerConfirmEntry(entry || null);
+  };
+
+  const confirmRunDocker = () => {
+    setDockerConfirmEntry(null);
+    // Open the name dialog
+    setDockerProjectName("");
+    setDockerNameDialogOpen(true);
+  };
+
+  const executeDockerRun = async (projectName?: string) => {
+    setDockerNameDialogOpen(false);
+
+    const composePath = currentPath;
+
+    setDockerRunOpen(true);
+    setDockerRunLogs([]);
+    setDockerRunning(true);
+    setDockerRunResult("idle");
+    setDockerRunContainers([]);
+
+    const token = localStorage.getItem("accessToken");
+    const API_URL = import.meta.env.VITE_API_URL || "";
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/docker/${selectedServer?._id}/compose-up`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            composePath: currentPath,
+            projectName: projectName || undefined,
+          }),
+        },
+      );
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const text = decoder.decode(value);
+          const lines = text.split("\n").filter((l) => l.trim());
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const json = JSON.parse(line.slice(6));
+                if (json.line) {
+                  setDockerRunLogs((prev) => [...prev, json.line]);
+                }
+              } catch {}
+            }
+            if (line.startsWith("event: complete")) {
+              try {
+                // Try to extract containers if sent
+                const dataLine = lines.find((l) => l.startsWith("data: "));
+                if (dataLine) {
+                  const json = JSON.parse(dataLine.slice(6));
+                  if (json.containers) {
+                    setDockerRunContainers(json.containers);
+                  }
+                }
+              } catch {}
+
+              toast.success("Docker Compose started successfully");
+              setDockerRunResult("success");
+            }
+            if (line.startsWith("event: error")) {
+              try {
+                const dataLine = lines.find((l) => l.startsWith("data: "));
+                if (dataLine) {
+                  const json = JSON.parse(dataLine.slice(6));
+                  toast.error(`Error: ${json.message}`);
+                }
+              } catch {
+                toast.error("An error occurred during docker compose up");
+              }
+              setDockerRunResult("error");
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      toast.error("Failed to start docker compose");
+      setDockerRunResult("error");
+    } finally {
+      setDockerRunning(false);
+    }
+  };
 
   const handleCreateFile = async () => {
     if (!createFileName) return;
@@ -774,15 +1107,14 @@ const FTPManager: React.FC = () => {
   /* ─── Navigation ─── */
   const navigateTo = useCallback(
     (path: string) => {
-      setSearchParams((prev) => {
-        prev.set("path", path);
-        if (selectedServer) {
-          prev.set("server", selectedServer._id);
-        }
-        return prev;
-      });
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("path", path);
+      if (selectedServer) {
+        nextParams.set("server", selectedServer._id);
+      }
+      setSearchParams(nextParams);
     },
-    [setSearchParams, selectedServer],
+    [searchParams, setSearchParams, selectedServer],
   );
 
   const goUp = useCallback(() => {
@@ -963,29 +1295,243 @@ const FTPManager: React.FC = () => {
     [currentPath, selectedServer],
   );
 
+  // Helper: recursively read all files from a FileSystemEntry
+  const readEntriesRecursive = useCallback(
+    async (
+      entry: FileSystemEntry,
+      basePath: string,
+    ): Promise<{ file: File; relativePath: string }[]> => {
+      if (entry.isFile) {
+        const fileEntry = entry as FileSystemFileEntry;
+        return new Promise((resolve) => {
+          fileEntry.file((file) => {
+            resolve([{ file, relativePath: basePath }]);
+          });
+        });
+      }
+      if (entry.isDirectory) {
+        const dirEntry = entry as FileSystemDirectoryEntry;
+        const reader = dirEntry.createReader();
+        const entries: FileSystemEntry[] = await new Promise((resolve) => {
+          const allEntries: FileSystemEntry[] = [];
+          const readBatch = () => {
+            reader.readEntries((batch) => {
+              if (batch.length === 0) {
+                resolve(allEntries);
+              } else {
+                allEntries.push(...batch);
+                readBatch();
+              }
+            });
+          };
+          readBatch();
+        });
+        const results: { file: File; relativePath: string }[] = [];
+        for (const child of entries) {
+          const childPath = basePath ? `${basePath}/${child.name}` : child.name;
+          const childFiles = await readEntriesRecursive(child, childPath);
+          results.push(...childFiles);
+        }
+        return results;
+      }
+      return [];
+    },
+    [],
+  );
+
+  // Upload execution separate from collision check
+  const executeUpload = useCallback(
+    async (fileEntries: { file: File; relativePath: string }[]) => {
+      if (fileEntries.length === 0) return;
+      setUploading(true);
+      setUploadPanelVisible(true);
+      setUploadPanelOpen(true);
+      setUploadOpen(false);
+
+      // Group by top-level entry
+      const groups = new Map<string, { file: File; relativePath: string }[]>();
+      for (const entry of fileEntries) {
+        const top = entry.relativePath.split("/")[0];
+        if (!groups.has(top)) groups.set(top, []);
+        groups.get(top)!.push(entry);
+      }
+
+      // Create one UploadItem per top-level entry
+      const ts = Date.now();
+      const newItems: UploadItem[] = [];
+      let idx = 0;
+      for (const [name, files] of groups) {
+        const isFolder =
+          files.length > 1 || files[0].relativePath.includes("/");
+        newItems.push({
+          id: `${ts}-z${idx}`,
+          fileName: isFolder ? `📁 ${name}` : name,
+          progress: 0,
+          status: "uploading",
+          totalFiles: isFolder ? files.length : undefined,
+          completedFiles: 0,
+        });
+        idx++;
+      }
+      setUploadItems((prev) => [...prev, ...newItems]);
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Process each top-level entry sequentially
+      const groupEntries = Array.from(groups.entries());
+      for (let g = 0; g < groupEntries.length; g++) {
+        const [topName, files] = groupEntries[g];
+        const itemId = newItems[g].id;
+        const isFolder =
+          files.length > 1 || files[0].relativePath.includes("/");
+
+        const updateItem = (updates: Partial<UploadItem>) => {
+          setUploadItems((prev) =>
+            prev.map((item) =>
+              item.id === itemId ? { ...item, ...updates } : item,
+            ),
+          );
+        };
+
+        try {
+          if (isFolder) {
+            // ZIP this folder's files and upload as archive
+            updateItem({ progress: 10 });
+
+            const zipData: Record<string, Uint8Array> = {};
+            for (const entry of files) {
+              const buf = await entry.file.arrayBuffer();
+              zipData[entry.relativePath] = new Uint8Array(buf);
+            }
+
+            updateItem({ progress: 20 });
+            const zipped = zipSync(zipData);
+            const zipBlob = new Blob([zipped.buffer as ArrayBuffer], {
+              type: "application/zip",
+            });
+
+            const formData = new FormData();
+            formData.append(
+              "file",
+              zipBlob,
+              `_upload_${topName}_${Date.now()}.zip`,
+            );
+            formData.append("path", currentPath);
+
+            await api.post(
+              `/ftp/${selectedServer?._id}/upload-archive`,
+              formData,
+              {
+                headers: { "Content-Type": "multipart/form-data" },
+                onUploadProgress: (progressEvent) => {
+                  const percent = progressEvent.total
+                    ? Math.round(
+                        20 + (progressEvent.loaded * 75) / progressEvent.total,
+                      )
+                    : 20;
+                  updateItem({ progress: Math.min(percent, 95) });
+                },
+              },
+            );
+
+            updateItem({
+              progress: 100,
+              status: "done",
+              completedFiles: files.length,
+            });
+            successCount += files.length;
+          } else {
+            // Single file — regular upload
+            const formData = new FormData();
+            formData.append("file", files[0].file);
+            formData.append("path", currentPath);
+
+            await api.post(`/ftp/${selectedServer?._id}/upload`, formData, {
+              headers: { "Content-Type": "multipart/form-data" },
+              onUploadProgress: (progressEvent) => {
+                const percent = progressEvent.total
+                  ? Math.round(
+                      (progressEvent.loaded * 100) / progressEvent.total,
+                    )
+                  : 0;
+                updateItem({ progress: Math.min(percent, 95) });
+              },
+            });
+
+            updateItem({ progress: 100, status: "done" });
+            successCount++;
+          }
+        } catch (err: any) {
+          const errMsg = err.response?.data?.message || t("ftp.uploadFailed");
+          updateItem({ status: "error", error: errMsg });
+          errorCount += isFolder ? files.length : 1;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(t("ftp.uploadSuccess", { count: successCount }));
+        browse(currentPath);
+      }
+      if (errorCount > 0 && successCount === 0) {
+        toast.error(t("ftp.uploadFailed"));
+      }
+
+      setUploading(false);
+
+      // Auto-close panel after 8s
+      setTimeout(() => {
+        setUploadItems((prev) => {
+          const allDone = prev.every((i) => i.status !== "uploading");
+          if (allDone) {
+            setUploadPanelVisible(false);
+            return [];
+          }
+          return prev;
+        });
+      }, 8000);
+    },
+    [currentPath, selectedServer, browse, t],
+  );
+
+  const handleUploadWithPaths = useCallback(
+    async (fileEntries: { file: File; relativePath: string }[]) => {
+      if (fileEntries.length === 0) return;
+
+      const groups = new Map<string, { file: File; relativePath: string }[]>();
+      for (const entry of fileEntries) {
+        const top = entry.relativePath.split("/")[0];
+        if (!groups.has(top)) groups.set(top, []);
+        groups.get(top)!.push(entry);
+      }
+
+      const conflicts = Array.from(groups.keys()).filter((top) =>
+        entries.some((e) => e.name === top),
+      );
+
+      if (conflicts.length > 0) {
+        setPendingUploads(fileEntries);
+        setUploadConflicts(conflicts);
+        setUploadConflictOpen(true);
+        return;
+      }
+
+      executeUpload(fileEntries);
+    },
+    [entries, executeUpload],
+  );
+
+  // Simple file upload (from file input - no folders)
   const handleUpload = useCallback(
     async (files: FileList | null) => {
       if (!files || files.length === 0) return;
-      setUploading(true);
-      try {
-        for (let i = 0; i < files.length; i++) {
-          const formData = new FormData();
-          formData.append("file", files[i]);
-          formData.append("path", currentPath);
-          await api.post(`/ftp/${selectedServer?._id}/upload`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
-        }
-        toast.success(t("ftp.uploadSuccess", { count: files.length }));
-        browse(currentPath);
-      } catch (err: any) {
-        toast.error(err.response?.data?.message || t("ftp.uploadFailed"));
-      } finally {
-        setUploading(false);
-        setUploadOpen(false);
-      }
+      const entries = Array.from(files).map((file) => ({
+        file,
+        relativePath: file.name,
+      }));
+      handleUploadWithPaths(entries);
     },
-    [currentPath, selectedServer, browse],
+    [handleUploadWithPaths],
   );
 
   const handleMkdir = useCallback(async () => {
@@ -1035,29 +1581,41 @@ const FTPManager: React.FC = () => {
     }
   }, [currentPath, selectedServer, mkdirName, browse]);
 
-  const handleRename = useCallback(async () => {
-    if (!renameTarget || !newName.trim()) return;
-    setProcessing(true);
-    const oldPath =
-      (currentPath === "/" ? "/" : currentPath + "/") + renameTarget.name;
-    const newPath =
-      (currentPath === "/" ? "/" : currentPath + "/") + newName.trim();
-    try {
-      await api.post(`/ftp/${selectedServer?._id}/rename`, {
-        oldPath,
-        newPath,
-      });
-      toast.success(t("ftp.renamed"));
-      setRenameOpen(false);
-      setRenameTarget(null);
-      setNewName("");
-      browse(currentPath);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || t("ftp.renameFailed"));
-    } finally {
-      setProcessing(false);
-    }
-  }, [currentPath, selectedServer, renameTarget, newName, browse]);
+  const handleRename = useCallback(
+    async (overwrite = false) => {
+      if (!renameTarget || !newName.trim()) return;
+      setProcessing(true);
+      const oldPath =
+        (currentPath === "/" ? "/" : currentPath + "/") + renameTarget.name;
+      const newPath =
+        (currentPath === "/" ? "/" : currentPath + "/") + newName.trim();
+      try {
+        await api.post(`/ftp/${selectedServer?._id}/rename`, {
+          oldPath,
+          newPath,
+          overwrite,
+        });
+        toast.success(t("ftp.renamed"));
+        setRenameOpen(false);
+        setRenameTarget(null);
+        setNewName("");
+        setOverwriteConfirmOpen(false);
+        browse(currentPath);
+      } catch (err: any) {
+        if (
+          err.response?.status === 409 ||
+          err.response?.data?.code === "TARGET_EXISTS"
+        ) {
+          setOverwriteConfirmOpen(true);
+        } else {
+          toast.error(err.response?.data?.message || t("ftp.renameFailed"));
+        }
+      } finally {
+        setProcessing(false);
+      }
+    },
+    [currentPath, selectedServer, renameTarget, newName, browse, t],
+  );
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -1157,12 +1715,39 @@ const FTPManager: React.FC = () => {
   const [dragOver, setDragOver] = useState(false);
 
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    async (e: React.DragEvent) => {
       e.preventDefault();
       setDragOver(false);
+
+      // Try to use webkitGetAsEntry to support folder drops
+      const items = e.dataTransfer.items;
+      if (items && items.length > 0 && (items[0] as any).webkitGetAsEntry) {
+        const allFiles: { file: File; relativePath: string }[] = [];
+        const entryPromises: Promise<void>[] = [];
+
+        for (let i = 0; i < items.length; i++) {
+          const entry = (
+            items[i] as any
+          ).webkitGetAsEntry() as FileSystemEntry | null;
+          if (entry) {
+            entryPromises.push(
+              readEntriesRecursive(entry, entry.name).then((files) => {
+                allFiles.push(...files);
+              }),
+            );
+          }
+        }
+        await Promise.all(entryPromises);
+        if (allFiles.length > 0) {
+          handleUploadWithPaths(allFiles);
+          return;
+        }
+      }
+
+      // Fallback: plain files
       handleUpload(e.dataTransfer.files);
     },
-    [handleUpload],
+    [handleUpload, handleUploadWithPaths, readEntriesRecursive],
   );
 
   /* ────────── Multi-select helpers ────────── */
@@ -1644,7 +2229,7 @@ const FTPManager: React.FC = () => {
 
             <Box sx={{ flex: 1 }} />
 
-            <Box sx={{ display: "flex", gap: 0.5 }}>
+            <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
               <Tooltip title={t("ftp.refresh")}>
                 <IconButton
                   onClick={() => browse(currentPath)}
@@ -2188,7 +2773,7 @@ const FTPManager: React.FC = () => {
                       </TableCell>
                       <TableCell
                         sx={{ fontWeight: 700 }}
-                        width={120}
+                        width={150}
                         align="center"
                       >
                         {t("ftp.actions")}
@@ -2205,6 +2790,7 @@ const FTPManager: React.FC = () => {
                         onEntryClick={handleEntryClick}
                         onContextMenu={handleContextMenu}
                         onOpenTerminal={handleOpenTerminalEntry}
+                        onRunDocker={handleRunDocker}
                         folderSize={folderSizes[entry.name]}
                       />
                     ))}
@@ -2379,6 +2965,19 @@ const FTPManager: React.FC = () => {
           </ListItemIcon>
           <ListItemText>{t("ftp.openTerminal")}</ListItemText>
         </MenuItem>
+        {contextMenu?.entry && isComposeFile(contextMenu.entry.name) && (
+          <MenuItem
+            onClick={() => {
+              handleRunDocker(contextMenu.entry);
+              setContextMenu(null);
+            }}
+          >
+            <ListItemIcon>
+              <DockerIcon fontSize="small" sx={{ color: "primary.main" }} />
+            </ListItemIcon>
+            <ListItemText>Run Docker Compose Up</ListItemText>
+          </MenuItem>
+        )}
         <Divider />
         {/* Preview image */}
         {contextMenu?.entry.type === "file" &&
@@ -2721,7 +3320,7 @@ const FTPManager: React.FC = () => {
             onChange={(e) => setNewName(e.target.value)}
             disabled={processing}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !processing) handleRename();
+              if (e.key === "Enter" && !processing) handleRename(false);
             }}
           />
         </DialogContent>
@@ -2730,7 +3329,7 @@ const FTPManager: React.FC = () => {
             {t("ftp.cancel")}
           </Button>
           <Button
-            onClick={handleRename}
+            onClick={() => handleRename(false)}
             variant="contained"
             disabled={processing || !newName.trim()}
           >
@@ -2738,6 +3337,51 @@ const FTPManager: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ─── Overwrite Confirm dialog ─── */}
+      <Dialog
+        open={overwriteConfirmOpen}
+        onClose={() => setOverwriteConfirmOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        fullScreen={isMobile}
+      >
+        <DialogTitle>
+          {t("ftp.overwriteTitle", "Confirm Overwrite")}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            The destination "{newName}" already exists. Do you want to replace
+            the existing file/folder?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setOverwriteConfirmOpen(false)}
+            disabled={processing}
+          >
+            {t("ftp.cancel")}
+          </Button>
+          <Button
+            onClick={() => handleRename(true)}
+            variant="contained"
+            color="error"
+            disabled={processing}
+          >
+            {t("ftp.overwrite", "Replace")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ─── Upload Conflict Confirm dialog ─── */}
+      <UploadConflictDialog
+        open={uploadConflictOpen}
+        onClose={() => setUploadConflictOpen(false)}
+        conflicts={uploadConflicts}
+        pendingUploads={pendingUploads}
+        executeUpload={executeUpload}
+        t={t}
+      />
 
       {/* ─── Move dialog ─── */}
       <Dialog
@@ -3221,6 +3865,452 @@ const FTPManager: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* ─── Upload Progress Panel ─── */}
+      {uploadPanelVisible && uploadItems.length > 0 && (
+        <Paper
+          elevation={8}
+          sx={{
+            position: "fixed",
+            bottom: { xs: 80, md: 24 },
+            right: { xs: 12, md: 24 },
+            width: { xs: "calc(100% - 24px)", sm: 380 },
+            maxHeight: uploadPanelOpen ? 400 : "auto",
+            zIndex: 1400,
+            borderRadius: 3,
+            overflow: "hidden",
+            bgcolor: "rgba(30, 30, 46, 0.95)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
+        >
+          {/* Panel Header */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              px: 2,
+              py: 1.25,
+              borderBottom: uploadPanelOpen
+                ? "1px solid rgba(255,255,255,0.08)"
+                : "none",
+              background:
+                "linear-gradient(135deg, rgba(25,118,210,0.15) 0%, rgba(156,39,176,0.1) 100%)",
+              cursor: "pointer",
+            }}
+            onClick={() => setUploadPanelOpen((v) => !v)}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <UploadIcon fontSize="small" sx={{ color: "primary.main" }} />
+              <Typography
+                variant="subtitle2"
+                fontWeight={700}
+                sx={{ color: "white" }}
+              >
+                {t("ftp.uploadProgress")}
+              </Typography>
+              <Chip
+                label={uploadItems.length}
+                size="small"
+                sx={{
+                  height: 20,
+                  fontSize: "0.7rem",
+                  fontWeight: 700,
+                  bgcolor: "primary.main",
+                  color: "white",
+                }}
+              />
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              {!uploading && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setUploadItems([]);
+                    setUploadPanelVisible(false);
+                  }}
+                  sx={{ color: "text.secondary" }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              )}
+              <IconButton size="small" sx={{ color: "text.secondary" }}>
+                {uploadPanelOpen ? (
+                  <ExpandMoreIcon fontSize="small" />
+                ) : (
+                  <ExpandLessIcon fontSize="small" />
+                )}
+              </IconButton>
+            </Box>
+          </Box>
+
+          {/* Panel Body */}
+          {uploadPanelOpen && (
+            <Box
+              sx={{
+                maxHeight: 320,
+                overflowY: "auto",
+                "&::-webkit-scrollbar": { width: 4 },
+                "&::-webkit-scrollbar-thumb": {
+                  bgcolor: "rgba(255,255,255,0.15)",
+                  borderRadius: 2,
+                },
+              }}
+            >
+              {uploadItems.map((item) => (
+                <Box
+                  key={item.id}
+                  sx={{
+                    px: 2,
+                    py: 1.25,
+                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    transition: "background 0.2s",
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.03)" },
+                    "&:last-child": { borderBottom: "none" },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      mb: 0.5,
+                    }}
+                  >
+                    {/* Status icon */}
+                    {item.status === "done" ? (
+                      <CloudDoneIcon
+                        fontSize="small"
+                        sx={{ color: "#4caf50", flexShrink: 0 }}
+                      />
+                    ) : item.status === "error" ? (
+                      <ErrorOutlineIcon
+                        fontSize="small"
+                        sx={{ color: "#f44336", flexShrink: 0 }}
+                      />
+                    ) : (
+                      <FileIcon
+                        fontSize="small"
+                        sx={{ color: "primary.main", flexShrink: 0 }}
+                      />
+                    )}
+                    {/* File name */}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography
+                        variant="body2"
+                        noWrap
+                        sx={{
+                          fontWeight: 500,
+                          color:
+                            item.status === "error"
+                              ? "#f44336"
+                              : "text.primary",
+                        }}
+                      >
+                        {item.fileName}
+                      </Typography>
+                      {item.totalFiles && item.totalFiles > 1 && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "text.secondary",
+                            fontSize: "0.65rem",
+                          }}
+                        >
+                          {(item.completedFiles || 0) + (item.failedFiles || 0)}
+                          /{item.totalFiles} files
+                        </Typography>
+                      )}
+                    </Box>
+                    {/* Percentage */}
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: 700,
+                        fontFamily: "monospace",
+                        minWidth: 40,
+                        textAlign: "right",
+                        color:
+                          item.status === "done"
+                            ? "#4caf50"
+                            : item.status === "error"
+                              ? "#f44336"
+                              : "primary.main",
+                      }}
+                    >
+                      {item.status === "done"
+                        ? "✓"
+                        : item.status === "error"
+                          ? "✗"
+                          : `${item.progress}%`}
+                    </Typography>
+                  </Box>
+                  {/* Progress bar */}
+                  {item.status === "uploading" && (
+                    <LinearProgress
+                      variant="determinate"
+                      value={item.progress}
+                      sx={{
+                        height: 4,
+                        borderRadius: 2,
+                        bgcolor: "rgba(255,255,255,0.06)",
+                        "& .MuiLinearProgress-bar": {
+                          borderRadius: 2,
+                          background:
+                            "linear-gradient(90deg, #1976d2, #9c27b0)",
+                        },
+                      }}
+                    />
+                  )}
+                  {item.status === "done" && (
+                    <LinearProgress
+                      variant="determinate"
+                      value={100}
+                      sx={{
+                        height: 4,
+                        borderRadius: 2,
+                        bgcolor: "rgba(255,255,255,0.06)",
+                        "& .MuiLinearProgress-bar": {
+                          borderRadius: 2,
+                          bgcolor: "#4caf50",
+                        },
+                      }}
+                    />
+                  )}
+                  {item.status === "error" && item.error && (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: "#f44336",
+                        display: "block",
+                        mt: 0.5,
+                        fontSize: "0.7rem",
+                        opacity: 0.9,
+                      }}
+                    >
+                      {item.error}
+                    </Typography>
+                  )}
+                </Box>
+              ))}
+
+              {/* Clear completed button */}
+              {!uploading &&
+                uploadItems.some((i) => i.status !== "uploading") && (
+                  <Box sx={{ px: 2, py: 1, textAlign: "center" }}>
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        const remaining = uploadItems.filter(
+                          (i) => i.status === "uploading",
+                        );
+                        if (remaining.length === 0) {
+                          setUploadItems([]);
+                          setUploadPanelVisible(false);
+                        } else {
+                          setUploadItems(remaining);
+                        }
+                      }}
+                      sx={{
+                        fontSize: "0.75rem",
+                        textTransform: "none",
+                        color: "text.secondary",
+                        "&:hover": { color: "primary.main" },
+                      }}
+                    >
+                      {t("ftp.clearCompleted")}
+                    </Button>
+                  </Box>
+                )}
+            </Box>
+          )}
+        </Paper>
+      )}
+
+      {/* Docker Compose Confirm Dialog */}
+      <Dialog
+        open={Boolean(dockerConfirmEntry)}
+        onClose={() => setDockerConfirmEntry(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          🐳 Run Docker Compose?
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            This will run <strong>docker compose up -d --build</strong> in:
+          </Typography>
+          <Chip
+            label={currentPath || "/"}
+            size="small"
+            variant="outlined"
+            sx={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}
+          />
+          {dockerConfirmEntry && (
+            <Typography
+              variant="caption"
+              display="block"
+              color="text.secondary"
+              sx={{ mt: 1 }}
+            >
+              File: {dockerConfirmEntry.name}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDockerConfirmEntry(null)}>Cancel</Button>
+          <Button variant="contained" onClick={confirmRunDocker}>
+            Next
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Docker Compose Name Dialog */}
+      <Dialog
+        open={dockerNameDialogOpen}
+        onClose={() => setDockerNameDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          📦 Custom Project Name?
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Enter a custom project name or skip to use the default (directory
+            name).
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            size="small"
+            label="Project Name"
+            placeholder="e.g. my-app"
+            value={dockerProjectName}
+            onChange={(e) => setDockerProjectName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                executeDockerRun(dockerProjectName.trim() || undefined);
+              }
+            }}
+            sx={{ fontFamily: "'JetBrains Mono', monospace" }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDockerNameDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => executeDockerRun()}>Skip & Run</Button>
+          <Button
+            variant="contained"
+            onClick={() =>
+              executeDockerRun(dockerProjectName.trim() || undefined)
+            }
+            disabled={!dockerProjectName.trim()}
+          >
+            Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Docker Compose Run Dialog */}
+      <Dialog
+        open={dockerRunOpen}
+        onClose={() => !dockerRunning && setDockerRunOpen(false)}
+        maxWidth="md"
+        fullWidth
+        disableEscapeKeyDown={dockerRunning}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <DockerIcon color="primary" />
+            <Typography variant="h6">Docker Compose Up</Typography>
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {dockerRunning && <CircularProgress size={20} />}
+            {dockerRunResult === "success" && (
+              <Chip label="Success" color="success" size="small" />
+            )}
+            {dockerRunResult === "error" && (
+              <Chip label="Error" color="error" size="small" />
+            )}
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers sx={{ bgcolor: "#1e1e1e", p: 0 }}>
+          <Box
+            ref={logContainerRef}
+            sx={{
+              height: 400,
+              overflowY: "auto",
+              p: 2,
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "0.85rem",
+              color: "#d4d4d4",
+              bgcolor: "#1e1e1e",
+              "&::-webkit-scrollbar": {
+                width: 8,
+              },
+              "&::-webkit-scrollbar-track": {
+                bgcolor: "transparent",
+              },
+              "&::-webkit-scrollbar-thumb": {
+                bgcolor: "rgba(255,255,255,0.2)",
+                borderRadius: 4,
+              },
+            }}
+          >
+            {dockerRunLogs.length === 0 && !dockerRunning ? (
+              <Typography color="text.secondary" sx={{ fontStyle: "italic" }}>
+                Waiting for logs...
+              </Typography>
+            ) : (
+              dockerRunLogs.map((log, i) => (
+                <Box
+                  key={i}
+                  sx={{
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-all",
+                    mb: 0.5,
+                  }}
+                >
+                  {log}
+                </Box>
+              ))
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          {dockerRunResult === "success" && (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => {
+                setDockerRunOpen(false);
+                navigate("/docker");
+              }}
+              endIcon={<DockerIcon />}
+            >
+              Go to Docker Manager
+            </Button>
+          )}
+          <Button
+            onClick={() => setDockerRunOpen(false)}
+            disabled={dockerRunning}
+            variant={dockerRunResult === "success" ? "outlined" : "contained"}
+          >
+            {dockerRunning ? "Running..." : "Close"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Terminal Panel - Persistent */}
       <Box
         sx={{
@@ -3228,7 +4318,7 @@ const FTPManager: React.FC = () => {
           bottom: 0,
           left: 0,
           right: 0,
-          height: "40vh",
+          height: "60vh",
           bgcolor: "#1e1e1e",
           borderTop: "1px solid rgba(255,255,255,0.1)",
           zIndex: 1300, // Drawer z-index
@@ -3241,6 +4331,7 @@ const FTPManager: React.FC = () => {
           serverId={selectedServer?._id || ""}
           initialPath={terminalPath}
           onClose={() => setTerminalOpen(false)}
+          height="100%"
         />
       </Box>
     </Box>
