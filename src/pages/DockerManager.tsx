@@ -152,6 +152,51 @@ const DockerManager: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
 
+  const [installing, setInstalling] = useState(false);
+  const [installLogsOpen, setInstallLogsOpen] = useState(false);
+  const [installLogsContent, setInstallLogsContent] = useState("");
+
+  const handleInstallDocker = () => {
+    if (!serverId) return;
+
+    setInstalling(true);
+    setInstallLogsContent("");
+    setInstallLogsOpen(true);
+
+    const token = localStorage.getItem("accessToken");
+    const API_URL = import.meta.env.VITE_API_URL || "";
+    const url = `${API_URL}/api/docker/${serverId}/install/stream?token=${token}`;
+
+    const es = new EventSource(url);
+
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.log) {
+          setInstallLogsContent((prev) => prev + data.log + "\n");
+        }
+        if (data.done) {
+          es.close();
+          setInstalling(false);
+          if (data.type !== "error") {
+            setTimeout(() => {
+              setInstallLogsOpen(false);
+              fetchData();
+            }, 2000);
+          }
+        }
+      } catch (e) {}
+    };
+
+    es.onerror = () => {
+      setInstallLogsContent(
+        (prev) => prev + "\n[EventSource Error] Connection lost.",
+      );
+      es.close();
+      setInstalling(false);
+    };
+  };
+
   const handleRunContainer = async () => {
     setActionLoading("running");
     setRunError(null);
@@ -479,12 +524,68 @@ const DockerManager: React.FC = () => {
         <Typography variant="h6" color="text.secondary" gutterBottom>
           {t("docker.notInstalled", "Docker is not installed on this server")}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           {t(
             "docker.notInstalledHint",
             "Install Docker to manage containers from here.",
           )}
         </Typography>
+        <Button
+          variant="contained"
+          startIcon={
+            installing ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              <PlayArrowIcon />
+            )
+          }
+          onClick={handleInstallDocker}
+          disabled={installing}
+        >
+          {installing ? "Installing..." : "Install Docker"}
+        </Button>
+
+        {/* Installation Logs Dialog inside the empty state view to ensure it renders */}
+        <Dialog
+          open={installLogsOpen}
+          fullWidth
+          maxWidth="md"
+          PaperProps={{
+            sx: { bgcolor: "background.paper", backgroundImage: "none" },
+          }}
+        >
+          <DialogTitle sx={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            Installing Docker on {selectedServer?.name}
+          </DialogTitle>
+          <DialogContent sx={{ p: 0 }}>
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: "#000",
+                color: "#a8b2d1",
+                fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                fontSize: "0.85rem",
+                height: 400,
+                overflowY: "auto",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-all",
+              }}
+            >
+              {installLogsContent}
+            </Box>
+          </DialogContent>
+          <DialogActions
+            sx={{ p: 2, borderTop: "1px solid rgba(255,255,255,0.06)" }}
+          >
+            {installing && <CircularProgress size={20} sx={{ mr: 2 }} />}
+            <Button
+              onClick={() => setInstallLogsOpen(false)}
+              disabled={installing}
+            >
+              {installing ? "Installing..." : "Close"}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     );
   }
