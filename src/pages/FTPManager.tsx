@@ -645,14 +645,16 @@ const FTPManager: React.FC = () => {
   // Browse state
   const [currentPath, setCurrentPath] = useState(initialPath || "/");
 
-  // Effect: Auto-select server if provided in URL
+  // Effect: Auto-select server if provided in URL (only on initial load)
+  const initialServerApplied = useRef(false);
   useEffect(() => {
+    if (initialServerApplied.current) return;
     if (initialServerId && !loadingServers && servers.length > 0) {
-      // Only switch if different (and exists)
       const target = servers.find((s) => s._id === initialServerId);
       if (target && selectedServer?._id !== target._id) {
         selectServer(target._id);
       }
+      initialServerApplied.current = true;
     }
   }, [initialServerId, servers, loadingServers, selectedServer, selectServer]);
 
